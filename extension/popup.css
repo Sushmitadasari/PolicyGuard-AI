@@ -1,0 +1,26 @@
+body {
+    font-family: Arial;
+    width: 300px;
+    padding: 10px;
+}
+
+.hidden {
+    display: none;
+}
+
+#loader {
+    text-align: center;
+    font-weight: bold;
+}
+
+.high { color: red; }
+.medium { color: orange; }
+.low { color: green; }
+
+#risks span {
+    background: #eee;
+    padding: 5px;
+    margin: 3px;
+    display: inline-block;
+    border-radius: 5px;
+}

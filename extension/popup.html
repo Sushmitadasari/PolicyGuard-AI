@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PolicyGuard AI</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+
+<h2>PolicyGuard AI</h2>
+
+<div id="loader">Analyzing...</div>
+
+<div id="result" class="hidden">
+    <p><strong>Risk Score:</strong> <span id="score"></span></p>
+    <p><strong>Risk Level:</strong> <span id="level"></span></p>
+    <p><strong>Summary:</strong></p>
+    <p id="summary"></p>
+
+    <div id="risks"></div>
+</div>
+
+<button id="analyzeBtn">Analyze This Page</button>
+
+<script src="popup.js"></script>
+</body>
+</html>
