@@ -1,27 +1,31 @@
-const express = require("express");
-const cors = require("cors");
+import express from "express";
+import dotenv from "dotenv";
+import cors from "cors";
+
+import connectDB from "./config/db.js";
+
+import authRoutes from "./routes/authRoutes.js";
+
+dotenv.config();
+
+connectDB();
 
 const app = express();
 
 app.use(cors());
+
 app.use(express.json());
 
-app.get("/", (req, res) => {
-    res.send("PolicyGuard AI Backend Running");
-});
+app.use(
+  "/api/auth",
+  authRoutes
+);
 
-app.post("/analyze", (req, res) => {
+const PORT =
+  process.env.PORT || 5000;
 
-    const text = req.body.text;
-
-    res.json({
-        summary: "This policy collects user data and shares with third parties.",
-        riskScore: 7,
-        riskLevel: "High",
-        risks: ["Data sharing", "Auto renewal"]
-    });
-});
-
-app.listen(5000, () => {
-    console.log("Server running on http://localhost:5000");
+app.listen(PORT, () => {
+  console.log(
+    `Server running on ${PORT}`
+  );
 });

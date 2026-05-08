@@ -1,0 +1,22 @@
+node_modules/
+
+# Environment
+.env
+.env.*
+
+# Build / output
+dist/
+build/
+
+# Logs and coverage
+logs/
+*.log
+coverage/
+
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/
+
+# PM2
+pm2.pid
