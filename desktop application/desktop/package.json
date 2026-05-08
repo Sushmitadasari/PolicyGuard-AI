@@ -1,0 +1,32 @@
+{
+  "name": "policyguard-ai",
+  "version": "1.0.0",
+  "description": "Privacy Risk Analyzer",
+  "author": "PolicyGuard Team",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "dev": "npm run start",
+    "dist": "npm run build"
+  },
+  "dependencies": {
+    "axios": "^1.6.8",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "node-notifier": "^10.0.1",
+    "ps-list": "^8.1.1"
+  },
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.policyguard.ai",
+    "productName": "PolicyGuard AI",
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    }
+  }
+}

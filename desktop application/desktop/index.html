@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Policy Guard AI</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Left Sidebar Navigation -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">🛡️</div>
+      <h2>Policy Guard AI</h2>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-section="dashboard">Dashboard</a>
+      <a href="#" class="nav-item" data-section="applications">Applications</a>
+      <a href="#" class="nav-item" data-section="live-scan">Live Scan</a>
+      <a href="#" class="nav-item" data-section="alerts">Alerts</a>
+      <a href="#" class="nav-item" data-section="ai-analysis">AI Analysis</a>
+      <a href="#" class="nav-item" data-section="reports">Reports</a>
+      <a href="#" class="nav-item" data-section="settings">Settings</a>
+    </nav>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Top Header -->
+    <header class="header">
+      <div class="header-left">
+        <h1>Policy Guard AI</h1>
+        <p class="subtitle">AI Powered Privacy Protection</p>
+      </div>
+      <div class="header-right">
+        <div class="status-indicator">
+          <span class="status-dot active"></span>
+          Live Monitoring Active
+        </div>
+        <div class="current-time" id="current-time">12:34 PM</div>
+      </div>
+    </header>
+
+    <!-- Dashboard Section -->
+    <section id="dashboard" class="section active">
+      <!-- Overall System Privacy Score -->
+      <div class="privacy-score-card">
+        <div class="score-circle">
+          <svg width="200" height="200">
+            <circle cx="100" cy="100" r="90" stroke="#333" stroke-width="10" fill="none"></circle>
+            <circle cx="100" cy="100" r="90" stroke="#ff6b35" stroke-width="10" fill="none" stroke-dasharray="565" stroke-dashoffset="113" transform="rotate(-90 100 100)"></circle>
+          </svg>
+          <div class="score-text">
+            <div class="score-number">78</div>
+            <div class="score-label">/100</div>
+            <div class="risk-level">Moderate Risk</div>
+          </div>
+        </div>
+        <div class="score-details">
+          <div class="detail-item">
+            <span class="detail-label">Total Scanned:</span>
+            <span class="detail-value">24 Apps</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">High Risk:</span>
+            <span class="detail-value">5 Apps</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Monitoring:</span>
+            <span class="detail-value active">Active</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Widgets -->
+      <div class="dashboard-widgets">
+        <div class="widget-card">
+          <h3>Total Applications</h3>
+          <div class="widget-value">24</div>
+        </div>
+        <div class="widget-card">
+          <h3>High Risk Apps</h3>
+          <div class="widget-value risk-high">5</div>
+        </div>
+        <div class="widget-card">
+          <h3>Safe Applications</h3>
+          <div class="widget-value risk-low">19</div>
+        </div>
+        <div class="widget-card">
+          <h3>Active Alerts</h3>
+          <div class="widget-value risk-medium">2</div>
+        </div>
+      </div>
+
+      <!-- Background Activity Monitoring -->
+      <div class="activity-panel">
+        <h2>Background Activity Monitoring</h2>
+        <div class="activity-list">
+          <div class="activity-item">
+            <div class="activity-icon">📷</div>
+            <div class="activity-details">
+              <div class="activity-app">Google Chrome</div>
+              <div class="activity-type">Camera Access</div>
+            </div>
+            <div class="activity-status active">Active</div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-icon">🎤</div>
+            <div class="activity-details">
+              <div class="activity-app">Zoom</div>
+              <div class="activity-type">Microphone Access</div>
+            </div>
+            <div class="activity-status">Inactive</div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-icon">📍</div>
+            <div class="activity-details">
+              <div class="activity-app">WhatsApp</div>
+              <div class="activity-type">Location Access</div>
+            </div>
+            <div class="activity-status active">Active</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Applications Section -->
+    <section id="applications" class="section">
+      <h2>Installed Desktop Applications</h2>
+      <div id="apps-container" class="apps-grid">
+        <!-- App cards will be added here -->
+      </div>
+    </section>
+
+    <!-- AI Analysis Section -->
+    <section id="ai-analysis" class="section">
+      <h2>AI Privacy Analysis</h2>
+      <div class="ai-analysis-panel">
+        <div class="analysis-card">
+          <h3>AI Generated Privacy Summary</h3>
+          <p>AI detected excessive background tracking and sensitive permission usage in several applications. Overall privacy score indicates moderate risk with potential for data leakage.</p>
+          <div class="confidence-score">
+            <span>AI Confidence: 92%</span>
+          </div>
+        </div>
+        <div class="analysis-card">
+          <h3>Risk Explanation</h3>
+          <p>High-risk applications are accessing location, camera, and storage permissions frequently. Background activity monitoring shows continuous data collection patterns.</p>
+        </div>
+        <div class="analysis-card">
+          <h3>Safety Recommendations</h3>
+          <ul>
+            <li>Limit unnecessary permissions for social media apps</li>
+            <li>Regularly review and revoke access for unused applications</li>
+            <li>Consider using privacy-focused alternatives</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Other sections can be added similarly -->
+  </div>
+
+  <!-- Real-Time Alert Popup -->
+  <div id="alert-popup" class="alert-popup">
+    <div class="alert-content">
+      <div class="alert-header">
+        <span class="alert-icon">⚠</span>
+        <h3>Privacy Alert</h3>
+      </div>
+      <div class="alert-body">
+        <div class="alert-app">
+          <strong>Application:</strong> PhonePe Desktop
+        </div>
+        <div class="alert-risk">
+          <strong>Risk Score:</strong> 71/100
+        </div>
+        <div class="alert-risks">
+          <strong>Detected Risks:</strong>
+          <ul>
+            <li>SMS access</li>
+            <li>Financial data access</li>
+            <li>Background activity</li>
+            <li>Location tracking</li>
+          </ul>
+        </div>
+      </div>
+      <div class="alert-actions">
+        <button class="btn btn-primary">View Details</button>
+        <button class="btn btn-secondary">Ignore</button>
+        <button class="btn btn-warning">Restrict Access</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
