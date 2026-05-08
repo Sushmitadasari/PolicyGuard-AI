@@ -16,13 +16,22 @@ export const AuthProvider = ({
 
   useEffect(() => {
     const token =
-      localStorage.getItem("token");
+      localStorage.getItem(
+        "token"
+      );
 
     const savedUser =
-      localStorage.getItem("user");
+      localStorage.getItem(
+        "user"
+      );
 
-    if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
+    if (
+      token &&
+      savedUser
+    ) {
+      setUser(
+        JSON.parse(savedUser)
+      );
     }
   }, []);
 
@@ -37,7 +46,9 @@ export const AuthProvider = ({
 
     localStorage.setItem(
       "user",
-      JSON.stringify(userData)
+      JSON.stringify(
+        userData
+      )
     );
 
     setUser(userData);

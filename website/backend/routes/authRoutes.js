@@ -1,35 +1,24 @@
 import express from "express";
 
 import {
-  sendRegisterOTP,
-  verifyRegisterOTP,
-  sendLoginOTP,
-  verifyLoginOTP,
+  registerUser,
+  loginUser,
   getProfile,
 } from "../controllers/authController.js";
 
 import protect from "../middleware/authMiddleware.js";
 
-const router = express.Router();
+const router =
+  express.Router();
 
 router.post(
-  "/register/send-otp",
-  sendRegisterOTP
+  "/register",
+  registerUser
 );
 
 router.post(
-  "/register/verify-otp",
-  verifyRegisterOTP
-);
-
-router.post(
-  "/login/send-otp",
-  sendLoginOTP
-);
-
-router.post(
-  "/login/verify-otp",
-  verifyLoginOTP
+  "/login",
+  loginUser
 );
 
 router.get(

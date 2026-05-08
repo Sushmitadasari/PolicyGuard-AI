@@ -12,8 +12,7 @@ import {
 } from "react-router-dom";
 
 import {
-  sendRegisterOTP,
-  verifyRegisterOTP,
+  registerUser,
 } from "../services/authService";
 
 import {
@@ -43,18 +42,6 @@ function Register() {
     setError] =
     useState("");
 
-  const [success,
-    setSuccess] =
-    useState("");
-
-  const [otpSent,
-    setOtpSent] =
-    useState(false);
-
-  const [otp,
-    setOtp] =
-    useState("");
-
   const [formData,
     setFormData] =
     useState({
@@ -76,13 +63,11 @@ function Register() {
     });
   };
 
-  const handleSendOTP =
+  const handleRegister =
     async (e) => {
       e.preventDefault();
 
       setError("");
-
-      setSuccess("");
 
       if (
         formData.password !==
@@ -98,45 +83,15 @@ function Register() {
       try {
         setLoading(true);
 
-        await sendRegisterOTP({
-          name: formData.name,
-          email:
-            formData.email,
-        });
-
-        setOtpSent(true);
-
-        setSuccess(
-          "OTP sent successfully to your email."
-        );
-      } catch (error) {
-        setError(
-          error.response?.data
-            ?.message ||
-            "Failed to send OTP"
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-  const handleVerifyOTP =
-    async () => {
-      setError("");
-
-      try {
-        setLoading(true);
-
         const res =
-          await verifyRegisterOTP(
-            {
-              name:
-                formData.name,
-              email:
-                formData.email,
-              otp,
-            }
-          );
+          await registerUser({
+            name:
+              formData.name,
+            email:
+              formData.email,
+            password:
+              formData.password,
+          });
 
         login(
           res.data.token,
@@ -150,7 +105,7 @@ function Register() {
         setError(
           error.response?.data
             ?.message ||
-            "OTP verification failed"
+            "Registration failed"
         );
       } finally {
         setLoading(false);
@@ -294,212 +249,146 @@ function Register() {
                 </div>
               )}
 
-              {/* SUCCESS */}
-              {success && (
-                <div className="mb-6 rounded-2xl border border-green-500/20 bg-green-500/10 p-4 text-green-400 font-semibold">
-                  {success}
-                </div>
-              )}
+              <form
+                onSubmit={
+                  handleRegister
+                }
+                className="space-y-6"
+              >
 
-              {!otpSent ? (
-
-                <form
-                  onSubmit={
-                    handleSendOTP
+                {/* NAME */}
+                <input
+                  type="text"
+                  name="name"
+                  required
+                  value={
+                    formData.name
                   }
-                  className="space-y-6"
+                  onChange={
+                    handleChange
+                  }
+                  placeholder="Full Name"
+                  className="w-full h-16 rounded-2xl bg-white/[0.03] border border-white/10 px-6 outline-none focus:border-blue-500"
+                />
+
+                {/* EMAIL */}
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  value={
+                    formData.email
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  placeholder="Email Address"
+                  className="w-full h-16 rounded-2xl bg-white/[0.03] border border-white/10 px-6 outline-none focus:border-blue-500"
+                />
+
+                {/* PASSWORD */}
+                <div className="relative">
+
+                  <input
+                    type={
+                      showPassword
+                        ? "text"
+                        : "password"
+                    }
+                    name="password"
+                    required
+                    value={
+                      formData.password
+                    }
+                    onChange={
+                      handleChange
+                    }
+                    placeholder="Password"
+                    className="w-full h-16 rounded-2xl bg-white/[0.03] border border-white/10 px-6 pr-16 outline-none focus:border-blue-500"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowPassword(
+                        !showPassword
+                      )
+                    }
+                    className="absolute top-1/2 right-5 -translate-y-1/2"
+                  >
+                    {showPassword
+                      ? "🙈"
+                      : "👁️"}
+                  </button>
+
+                </div>
+
+                {/* CONFIRM PASSWORD */}
+                <div className="relative">
+
+                  <input
+                    type={
+                      showConfirm
+                        ? "text"
+                        : "password"
+                    }
+                    name="confirmPassword"
+                    required
+                    value={
+                      formData.confirmPassword
+                    }
+                    onChange={
+                      handleChange
+                    }
+                    placeholder="Confirm Password"
+                    className="w-full h-16 rounded-2xl bg-white/[0.03] border border-white/10 px-6 pr-16 outline-none focus:border-blue-500"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowConfirm(
+                        !showConfirm
+                      )
+                    }
+                    className="absolute top-1/2 right-5 -translate-y-1/2"
+                  >
+                    {showConfirm
+                      ? "🙈"
+                      : "👁️"}
+                  </button>
+
+                </div>
+
+                {/* BUTTON */}
+                <motion.button
+                  whileHover={{
+                    scale: 1.02,
+                  }}
+                  whileTap={{
+                    scale: 0.98,
+                  }}
+                  type="submit"
+                  className="w-full h-16 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 font-black text-lg shadow-2xl shadow-blue-500/30"
                 >
 
-                  {/* NAME */}
-                  <input
-                    type="text"
-                    name="name"
-                    required
-                    value={
-                      formData.name
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="Full Name"
-                    className="w-full h-16 rounded-2xl bg-white/[0.03] border border-white/10 px-6 outline-none focus:border-blue-500"
-                  />
+                  <div className="flex items-center justify-center gap-4">
 
-                  {/* EMAIL */}
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    value={
-                      formData.email
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="Email Address"
-                    className="w-full h-16 rounded-2xl bg-white/[0.03] border border-white/10 px-6 outline-none focus:border-blue-500"
-                  />
+                    {loading && (
+                      <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    )}
 
-                  {/* PASSWORD */}
-                  <div className="relative">
-
-                    <input
-                      type={
-                        showPassword
-                          ? "text"
-                          : "password"
-                      }
-                      name="password"
-                      required
-                      value={
-                        formData.password
-                      }
-                      onChange={
-                        handleChange
-                      }
-                      placeholder="Password"
-                      className="w-full h-16 rounded-2xl bg-white/[0.03] border border-white/10 px-6 pr-16 outline-none focus:border-blue-500"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowPassword(
-                          !showPassword
-                        )
-                      }
-                      className="absolute top-1/2 right-5 -translate-y-1/2"
-                    >
-                      {showPassword
-                        ? "🙈"
-                        : "👁️"}
-                    </button>
+                    <span>
+                      {loading
+                        ? "Creating Account..."
+                        : "Create Account"}
+                    </span>
 
                   </div>
 
-                  {/* CONFIRM PASSWORD */}
-                  <div className="relative">
+                </motion.button>
 
-                    <input
-                      type={
-                        showConfirm
-                          ? "text"
-                          : "password"
-                      }
-                      name="confirmPassword"
-                      required
-                      value={
-                        formData.confirmPassword
-                      }
-                      onChange={
-                        handleChange
-                      }
-                      placeholder="Confirm Password"
-                      className="w-full h-16 rounded-2xl bg-white/[0.03] border border-white/10 px-6 pr-16 outline-none focus:border-blue-500"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowConfirm(
-                          !showConfirm
-                        )
-                      }
-                      className="absolute top-1/2 right-5 -translate-y-1/2"
-                    >
-                      {showConfirm
-                        ? "🙈"
-                        : "👁️"}
-                    </button>
-
-                  </div>
-
-                  {/* BUTTON */}
-                  <motion.button
-                    whileHover={{
-                      scale: 1.02,
-                    }}
-                    whileTap={{
-                      scale: 0.98,
-                    }}
-                    type="submit"
-                    className="w-full h-16 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 font-black text-lg shadow-2xl shadow-blue-500/30"
-                  >
-
-                    <div className="flex items-center justify-center gap-4">
-
-                      {loading && (
-                        <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                      )}
-
-                      <span>
-                        {loading
-                          ? "Sending OTP..."
-                          : "Send OTP"}
-                      </span>
-
-                    </div>
-
-                  </motion.button>
-
-                </form>
-
-              ) : (
-
-                <div className="space-y-6">
-
-                  <div>
-
-                    <label className="text-xs uppercase tracking-[0.2em] text-white/40 font-bold mb-3 block">
-                      Enter OTP
-                    </label>
-
-                    <input
-                      type="text"
-                      value={otp}
-                      onChange={(e) =>
-                        setOtp(
-                          e.target.value
-                        )
-                      }
-                      placeholder="123456"
-                      className="w-full h-16 rounded-2xl bg-white/[0.03] border border-white/10 px-6 outline-none focus:border-blue-500 tracking-[0.5em] text-center text-2xl font-black"
-                    />
-
-                  </div>
-
-                  <motion.button
-                    whileHover={{
-                      scale: 1.02,
-                    }}
-                    whileTap={{
-                      scale: 0.98,
-                    }}
-                    onClick={
-                      handleVerifyOTP
-                    }
-                    className="w-full h-16 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 font-black text-lg shadow-2xl shadow-blue-500/30"
-                  >
-
-                    <div className="flex items-center justify-center gap-4">
-
-                      {loading && (
-                        <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                      )}
-
-                      <span>
-                        {loading
-                          ? "Verifying..."
-                          : "Verify OTP"}
-                      </span>
-
-                    </div>
-
-                  </motion.button>
-
-                </div>
-
-              )}
+              </form>
 
               {/* LOGIN */}
               <div className="text-center mt-10">

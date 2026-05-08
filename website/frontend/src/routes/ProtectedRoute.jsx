@@ -9,7 +9,8 @@ import {
 function ProtectedRoute({
   children,
 }) {
-  const { user } = useAuth();
+  const { user } =
+    useAuth();
 
   if (!user) {
     return (

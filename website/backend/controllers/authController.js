@@ -1,109 +1,72 @@
-import User from "../models/User.js";
-import OTP from "../models/OTP.js";
+import bcrypt from "bcryptjs";
 
-import generateOTP from "../utils/generateOTP.js";
-import sendEmail from "../utils/sendEmail.js";
+import User from "../models/User.js";
+
 import generateToken from "../utils/generateToken.js";
 
-export const sendRegisterOTP =
+export const registerUser =
   async (req, res) => {
     try {
-      const { name, email } =
-        req.body;
+      const {
+        name,
+        email,
+        password,
+      } = req.body;
 
-      const existing =
+      const userExists =
         await User.findOne({
           email,
         });
 
-      if (existing) {
+      if (userExists) {
         return res.status(400).json({
           message:
-            "Email already exists",
+            "User already exists",
         });
       }
 
-      const otp = generateOTP();
+      const salt =
+        await bcrypt.genSalt(10);
 
-      await OTP.deleteMany({
-        email,
-      });
-
-      await OTP.create({
-        email,
-        otp,
-        expiresAt:
-          Date.now() +
-          5 * 60 * 1000,
-      });
-
-      await sendEmail(email, otp);
-
-      res.json({
-        message: "OTP Sent",
-      });
-    } catch (error) {
-      res.status(500).json({
-        message: error.message,
-      });
-    }
-  };
-
-export const verifyRegisterOTP =
-  async (req, res) => {
-    try {
-      const { name, email, otp } =
-        req.body;
-
-      const validOTP =
-        await OTP.findOne({
-          email,
-          otp,
-        });
-
-      if (!validOTP) {
-        return res.status(400).json({
-          message: "Invalid OTP",
-        });
-      }
-
-      if (
-        validOTP.expiresAt <
-        Date.now()
-      ) {
-        return res.status(400).json({
-          message: "OTP Expired",
-        });
-      }
+      const hashedPassword =
+        await bcrypt.hash(
+          password,
+          salt
+        );
 
       const user =
         await User.create({
           name,
           email,
+          password:
+            hashedPassword,
         });
 
-      await OTP.deleteMany({
-        email,
-      });
+      res.status(201).json({
+        token:
+          generateToken(
+            user._id
+          ),
 
-      const token =
-        generateToken(user._id);
-
-      res.json({
-        token,
-        user,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+        },
       });
     } catch (error) {
       res.status(500).json({
-        message: error.message,
+        message:
+          error.message,
       });
     }
   };
 
-export const sendLoginOTP =
+export const loginUser =
   async (req, res) => {
     try {
-      const { email } = req.body;
+      const { email, password } =
+        req.body;
 
       const user =
         await User.findOne({
@@ -111,83 +74,41 @@ export const sendLoginOTP =
         });
 
       if (!user) {
-        return res.status(404).json({
-          message: "User not found",
+        return res.status(400).json({
+          message:
+            "Invalid credentials",
         });
       }
 
-      const otp = generateOTP();
+      const isMatch =
+        await bcrypt.compare(
+          password,
+          user.password
+        );
 
-      await OTP.deleteMany({
-        email,
-      });
-
-      await OTP.create({
-        email,
-        otp,
-        expiresAt:
-          Date.now() +
-          5 * 60 * 1000,
-      });
-
-      await sendEmail(email, otp);
+      if (!isMatch) {
+        return res.status(400).json({
+          message:
+            "Invalid credentials",
+        });
+      }
 
       res.json({
-        message: "OTP Sent",
+        token:
+          generateToken(
+            user._id
+          ),
+
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+        },
       });
     } catch (error) {
       res.status(500).json({
-        message: error.message,
-      });
-    }
-  };
-
-export const verifyLoginOTP =
-  async (req, res) => {
-    try {
-      const { email, otp } =
-        req.body;
-
-      const validOTP =
-        await OTP.findOne({
-          email,
-          otp,
-        });
-
-      if (!validOTP) {
-        return res.status(400).json({
-          message: "Invalid OTP",
-        });
-      }
-
-      if (
-        validOTP.expiresAt <
-        Date.now()
-      ) {
-        return res.status(400).json({
-          message: "OTP Expired",
-        });
-      }
-
-      const user =
-        await User.findOne({
-          email,
-        });
-
-      await OTP.deleteMany({
-        email,
-      });
-
-      const token =
-        generateToken(user._id);
-
-      res.json({
-        token,
-        user,
-      });
-    } catch (error) {
-      res.status(500).json({
-        message: error.message,
+        message:
+          error.message,
       });
     }
   };

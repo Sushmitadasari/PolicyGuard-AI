@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 
-const protect = async (
+const protect = (
   req,
   res,
   next
@@ -19,22 +19,26 @@ const protect = async (
       )[1];
 
     try {
-      const decoded = jwt.verify(
-        token,
-        process.env.JWT_SECRET
-      );
+      const decoded =
+        jwt.verify(
+          token,
+          process.env.JWT_SECRET
+        );
 
-      req.user = decoded.id;
+      req.user =
+        decoded.id;
 
       next();
     } catch (error) {
       res.status(401).json({
-        message: "Invalid Token",
+        message:
+          "Invalid token",
       });
     }
   } else {
     res.status(401).json({
-      message: "No Token",
+      message:
+        "No token",
     });
   }
 };

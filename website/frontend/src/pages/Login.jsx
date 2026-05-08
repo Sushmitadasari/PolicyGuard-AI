@@ -13,8 +13,7 @@ import {
 } from "react-router-dom";
 
 import {
-  sendLoginOTP,
-  verifyLoginOTP,
+  loginUser,
 } from "../services/authService";
 
 import {
@@ -48,71 +47,32 @@ function Login() {
     setResetSuccess] =
     useState(false);
 
-  const [otpSent,
-    setOtpSent] =
-    useState(false);
-
-  const [otp,
-    setOtp] =
-    useState("");
-
   const [email,
     setEmail] =
+    useState("");
+
+  const [password,
+    setPassword] =
     useState("");
 
   const [error,
     setError] =
     useState("");
 
-  const [success,
-    setSuccess] =
-    useState("");
-
-  const handleSendOTP =
+  const handleLogin =
     async (e) => {
       e.preventDefault();
 
-      setError("");
-
-      setSuccess("");
-
-      try {
-        setLoading(true);
-
-        await sendLoginOTP({
-          email,
-        });
-
-        setOtpSent(true);
-
-        setSuccess(
-          "OTP sent successfully to your email."
-        );
-      } catch (error) {
-        setError(
-          error.response?.data
-            ?.message ||
-            "Failed to send OTP"
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-  const handleVerifyOTP =
-    async () => {
       setError("");
 
       try {
         setLoading(true);
 
         const res =
-          await verifyLoginOTP(
-            {
-              email,
-              otp,
-            }
-          );
+          await loginUser({
+            email,
+            password,
+          });
 
         login(
           res.data.token,
@@ -126,7 +86,7 @@ function Login() {
         setError(
           error.response?.data
             ?.message ||
-            "OTP verification failed"
+            "Login failed"
         );
       } finally {
         setLoading(false);
@@ -219,7 +179,6 @@ function Login() {
 
           <div className="absolute bottom-10 right-10 w-[300px] h-[300px] bg-purple-500/20 blur-[120px] rounded-full" />
 
-          {/* LOGO */}
           <div className="flex items-center gap-5 mb-10">
 
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-3xl font-black shadow-2xl shadow-blue-500/30">
@@ -272,7 +231,6 @@ function Login() {
 
             <div className="relative overflow-hidden rounded-[3rem] border border-white/10 bg-white/[0.04] backdrop-blur-3xl p-8 md:p-12">
 
-              {/* TOP */}
               <div className="mb-10">
 
                 <h2 className="text-5xl font-black tracking-tight mb-4">
@@ -285,224 +243,163 @@ function Login() {
 
               </div>
 
-              {/* ERROR */}
               {error && (
                 <div className="mb-6 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-red-400 font-semibold">
                   {error}
                 </div>
               )}
 
-              {/* SUCCESS */}
-              {success && (
-                <div className="mb-6 rounded-2xl border border-green-500/20 bg-green-500/10 p-4 text-green-400 font-semibold">
-                  {success}
+              <form
+                onSubmit={
+                  handleLogin
+                }
+                className="space-y-6"
+              >
+
+                {/* EMAIL */}
+                <div>
+
+                  <label className="text-xs uppercase tracking-[0.2em] text-white/40 font-bold mb-3 block">
+                    Email Address
+                  </label>
+
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) =>
+                      setEmail(
+                        e.target.value
+                      )
+                    }
+                    placeholder="sushmita@company.com"
+                    className="w-full h-16 rounded-2xl bg-white/[0.03] border border-white/10 px-6 outline-none focus:border-blue-500"
+                  />
+
                 </div>
-              )}
 
-              {!otpSent ? (
+                {/* PASSWORD */}
+                <div>
 
-                <form
-                  onSubmit={
-                    handleSendOTP
-                  }
-                  className="space-y-6"
-                >
+                  <label className="text-xs uppercase tracking-[0.2em] text-white/40 font-bold mb-3 block">
+                    Password
+                  </label>
 
-                  {/* EMAIL */}
-                  <div>
-
-                    <label className="text-xs uppercase tracking-[0.2em] text-white/40 font-bold mb-3 block">
-                      Email Address
-                    </label>
+                  <div className="relative">
 
                     <input
-                      type="email"
+                      type={
+                        showPassword
+                          ? "text"
+                          : "password"
+                      }
                       required
-                      value={email}
+                      value={password}
                       onChange={(e) =>
-                        setEmail(
+                        setPassword(
                           e.target.value
                         )
                       }
-                      placeholder="sushmita@company.com"
-                      className="w-full h-16 rounded-2xl bg-white/[0.03] border border-white/10 px-6 outline-none focus:border-blue-500"
+                      placeholder="••••••••"
+                      className="w-full h-16 rounded-2xl bg-white/[0.03] border border-white/10 px-6 pr-16 outline-none focus:border-blue-500"
                     />
-
-                  </div>
-
-                  {/* PASSWORD UI */}
-                  <div>
-
-                    <label className="text-xs uppercase tracking-[0.2em] text-white/40 font-bold mb-3 block">
-                      Password
-                    </label>
-
-                    <div className="relative">
-
-                      <input
-                        type={
-                          showPassword
-                            ? "text"
-                            : "password"
-                        }
-                        placeholder="••••••••"
-                        className="w-full h-16 rounded-2xl bg-white/[0.03] border border-white/10 px-6 pr-16 outline-none focus:border-blue-500"
-                      />
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setShowPassword(
-                            !showPassword
-                          )
-                        }
-                        className="absolute top-1/2 right-5 -translate-y-1/2 text-white/40 hover:text-white"
-                      >
-
-                        {showPassword
-                          ? "🙈"
-                          : "👁️"}
-
-                      </button>
-
-                    </div>
-
-                  </div>
-
-                  {/* OPTIONS */}
-                  <div className="flex items-center justify-between">
-
-                    <label className="flex items-center gap-3 cursor-pointer">
-
-                      <div
-                        onClick={() =>
-                          setRemember(
-                            !remember
-                          )
-                        }
-                        className={`w-6 h-6 rounded-md border flex items-center justify-center ${
-                          remember
-                            ? "bg-blue-600 border-blue-600"
-                            : "border-white/20 bg-white/[0.03]"
-                        }`}
-                      >
-
-                        {remember && (
-                          <span className="text-xs">
-                            ✓
-                          </span>
-                        )}
-
-                      </div>
-
-                      <span className="text-white/60">
-                        Remember Me
-                      </span>
-
-                    </label>
 
                     <button
                       type="button"
                       onClick={() =>
-                        setForgotModal(
-                          true
+                        setShowPassword(
+                          !showPassword
                         )
                       }
-                      className="text-blue-400 hover:text-blue-300 font-semibold"
+                      className="absolute top-1/2 right-5 -translate-y-1/2 text-white/40 hover:text-white"
                     >
-                      Forgot Password?
+
+                      {showPassword
+                        ? "🙈"
+                        : "👁️"}
+
                     </button>
 
                   </div>
 
-                  {/* LOGIN BUTTON */}
-                  <motion.button
-                    whileHover={{
-                      scale: 1.02,
-                    }}
-                    whileTap={{
-                      scale: 0.98,
-                    }}
-                    type="submit"
-                    className="relative overflow-hidden w-full h-16 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 font-black text-lg shadow-2xl shadow-blue-500/30"
-                  >
+                </div>
 
-                    <div className="flex items-center justify-center gap-4">
+                {/* OPTIONS */}
+                <div className="flex items-center justify-between">
 
-                      {loading && (
-                        <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                      )}
+                  <label className="flex items-center gap-3 cursor-pointer">
 
-                      <span>
-                        {loading
-                          ? "Sending OTP..."
-                          : "Send OTP"}
-                      </span>
-
-                    </div>
-
-                  </motion.button>
-
-                </form>
-
-              ) : (
-
-                <div className="space-y-6">
-
-                  <div>
-
-                    <label className="text-xs uppercase tracking-[0.2em] text-white/40 font-bold mb-3 block">
-                      Enter OTP
-                    </label>
-
-                    <input
-                      type="text"
-                      value={otp}
-                      onChange={(e) =>
-                        setOtp(
-                          e.target.value
+                    <div
+                      onClick={() =>
+                        setRemember(
+                          !remember
                         )
                       }
-                      placeholder="123456"
-                      className="w-full h-16 rounded-2xl bg-white/[0.03] border border-white/10 px-6 outline-none focus:border-blue-500 tracking-[0.5em] text-center text-2xl font-black"
-                    />
+                      className={`w-6 h-6 rounded-md border flex items-center justify-center ${
+                        remember
+                          ? "bg-blue-600 border-blue-600"
+                          : "border-white/20 bg-white/[0.03]"
+                      }`}
+                    >
 
-                  </div>
-
-                  <motion.button
-                    whileHover={{
-                      scale: 1.02,
-                    }}
-                    whileTap={{
-                      scale: 0.98,
-                    }}
-                    onClick={
-                      handleVerifyOTP
-                    }
-                    className="w-full h-16 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 font-black text-lg shadow-2xl shadow-blue-500/30"
-                  >
-
-                    <div className="flex items-center justify-center gap-4">
-
-                      {loading && (
-                        <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      {remember && (
+                        <span className="text-xs">
+                          ✓
+                        </span>
                       )}
-
-                      <span>
-                        {loading
-                          ? "Verifying..."
-                          : "Verify OTP"}
-                      </span>
 
                     </div>
 
-                  </motion.button>
+                    <span className="text-white/60">
+                      Remember Me
+                    </span>
+
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForgotModal(
+                        true
+                      )
+                    }
+                    className="text-blue-400 hover:text-blue-300 font-semibold"
+                  >
+                    Forgot Password?
+                  </button>
 
                 </div>
 
-              )}
+                {/* LOGIN BUTTON */}
+                <motion.button
+                  whileHover={{
+                    scale: 1.02,
+                  }}
+                  whileTap={{
+                    scale: 0.98,
+                  }}
+                  type="submit"
+                  className="relative overflow-hidden w-full h-16 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 font-black text-lg shadow-2xl shadow-blue-500/30"
+                >
 
-              {/* REGISTER */}
+                  <div className="flex items-center justify-center gap-4">
+
+                    {loading && (
+                      <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    )}
+
+                    <span>
+                      {loading
+                        ? "Signing In..."
+                        : "Access Dashboard"}
+                    </span>
+
+                  </div>
+
+                </motion.button>
+
+              </form>
+
               <div className="text-center mt-10">
 
                 <p className="text-white/50">
@@ -528,7 +425,7 @@ function Login() {
 
       </div>
 
-      {/* FORGOT PASSWORD MODAL */}
+      {/* FORGOT PASSWORD */}
       <AnimatePresence>
 
         {forgotModal && (
@@ -572,31 +469,8 @@ function Login() {
                   </h3>
 
                   <p className="text-center text-white/60 leading-relaxed mb-10">
-                    Enter your email and we’ll send you a secure password reset link.
+                    Password recovery system coming soon.
                   </p>
-
-                  <form
-                    onSubmit={
-                      handleReset
-                    }
-                    className="space-y-6"
-                  >
-
-                    <input
-                      type="email"
-                      required
-                      placeholder="sushmita@company.com"
-                      className="w-full h-16 rounded-2xl bg-white/[0.03] border border-white/10 px-6 outline-none focus:border-blue-500"
-                    />
-
-                    <button
-                      type="submit"
-                      className="w-full h-16 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 font-black"
-                    >
-                      Send Reset Link
-                    </button>
-
-                  </form>
 
                   <button
                     onClick={() =>
@@ -604,28 +478,12 @@ function Login() {
                         false
                       )
                     }
-                    className="w-full mt-5 h-14 rounded-2xl bg-white/[0.03] hover:bg-white/[0.05] font-bold"
+                    className="w-full h-14 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 font-black"
                   >
-                    Cancel
+                    Close
                   </button>
                 </>
-              ) : (
-                <div className="text-center">
-
-                  <div className="w-24 h-24 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center text-5xl mx-auto mb-8">
-                    ✅
-                  </div>
-
-                  <h3 className="text-4xl font-black mb-4">
-                    Reset Link Sent
-                  </h3>
-
-                  <p className="text-white/60 leading-relaxed">
-                    We’ve sent a secure password recovery link to your email address.
-                  </p>
-
-                </div>
-              )}
+              ) : null}
 
             </motion.div>
 
@@ -633,16 +491,6 @@ function Login() {
         )}
 
       </AnimatePresence>
-
-      <style>
-        {`
-          @keyframes shimmer {
-            100% {
-              transform: translateX(200%);
-            }
-          }
-        `}
-      </style>
 
     </div>
   );
