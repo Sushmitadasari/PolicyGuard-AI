@@ -10,10 +10,18 @@
     "test": "jest"
   },
   "dependencies": {
+    "@react-native/new-app-screen": "0.85.3",
+    "@react-navigation/bottom-tabs": "^7.15.12",
+    "@react-navigation/drawer": "^7.9.10",
+    "@react-navigation/native": "^7.2.3",
     "react": "19.2.3",
     "react-native": "0.85.3",
-    "@react-native/new-app-screen": "0.85.3",
-    "react-native-safe-area-context": "^5.5.2"
+    "react-native-device-info": "^15.0.2",
+    "react-native-gesture-handler": "^2.31.2",
+    "react-native-safe-area-context": "^5.5.2",
+    "react-native-screens": "^4.24.0",
+    "react-native-worklets": "^0.8.3",
+    "semver": "^7.7.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

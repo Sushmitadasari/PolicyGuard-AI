@@ -19,3 +19,22 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+subprojects {
+    if (name == "react-native-device-info") {
+        tasks.configureEach { task ->
+            if (task.name == "extractDebugAnnotations") {
+                task.enabled = false
+            }
+            if (task.name == "syncDebugLibJars") {
+                task.doFirst {
+                    def typedefFile = file("$buildDir/intermediates/annotations_typedef_file/debug/extractDebugAnnotations/typedefs.txt")
+                    typedefFile.parentFile.mkdirs()
+                    if (!typedefFile.exists()) {
+                        typedefFile.text = ""
+                    }
+                }
+            }
+        }
+    }
+}
