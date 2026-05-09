@@ -435,7 +435,9 @@ function History() {
               <button className="px-7 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 transition-all font-bold">
                 Download Report
               </button>
-
+               <button className="px-7 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 transition-all font-bold">
+                Delete
+              </button>
               
 
             </div>
