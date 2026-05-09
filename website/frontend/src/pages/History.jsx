@@ -139,17 +139,6 @@ function History() {
 
           </div>
 
-          <div className="flex flex-wrap gap-4">
-
-            <button className="h-14 px-8 rounded-2xl bg-blue-600 hover:bg-blue-500 transition-all font-bold shadow-xl shadow-blue-600/20">
-              Export History
-            </button>
-
-            <button className="h-14 px-8 rounded-2xl bg-white/[0.03] border border-white/10 hover:bg-white/[0.06] transition-all font-bold">
-              AI Summary
-            </button>
-
-          </div>
 
         </div>
 
@@ -200,196 +189,11 @@ function History() {
 
       </section>
 
-      {/* STATS */}
-      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
+     
 
-        <StatsCard
-          title="Total Analyses"
-          value="12,430"
-          growth="+18%"
-          icon="📂"
-        />
+      
 
-        <StatsCard
-          title="Risk Alerts"
-          value="1,280"
-          growth="+12%"
-          icon="⚠️"
-        />
-
-        <StatsCard
-          title="Archived Reports"
-          value="580"
-          growth="+5%"
-          icon="🗂️"
-        />
-
-        <StatsCard
-          title="AI Accuracy"
-          value="98.9%"
-          growth="+4%"
-          icon="🤖"
-        />
-
-      </section>
-
-      {/* CHARTS */}
-      <section className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-10">
-
-        {/* AREA CHART */}
-        <motion.div
-          whileHover={{
-            y: -4,
-          }}
-          className="xl:col-span-2 rounded-[3rem] border border-white/10 bg-white/[0.03] backdrop-blur-3xl p-8"
-        >
-
-          <div className="flex items-center justify-between mb-8">
-
-            <div>
-
-              <h2 className="text-3xl font-black">
-                Analysis Growth
-              </h2>
-
-              <p className="text-white/40 mt-2">
-                Monthly AI scanning activity
-              </p>
-
-            </div>
-
-            <div className="text-5xl">
-              📈
-            </div>
-
-          </div>
-
-          <div className="h-[320px]">
-
-            <ResponsiveContainer width="100%" height="100%">
-
-              <AreaChart data={CHART_DATA}>
-
-                <defs>
-
-                  <linearGradient
-                    id="historyGradient"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-
-                    <stop
-                      offset="5%"
-                      stopColor="#2563eb"
-                      stopOpacity={0.8}
-                    />
-
-                    <stop
-                      offset="95%"
-                      stopColor="#2563eb"
-                      stopOpacity={0}
-                    />
-
-                  </linearGradient>
-
-                </defs>
-
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#1e293b"
-                />
-
-                <XAxis
-                  dataKey="month"
-                  stroke="#94a3b8"
-                />
-
-                <YAxis stroke="#94a3b8" />
-
-                <Tooltip />
-
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#2563eb"
-                  fillOpacity={1}
-                  fill="url(#historyGradient)"
-                />
-
-              </AreaChart>
-
-            </ResponsiveContainer>
-
-          </div>
-
-        </motion.div>
-
-        {/* BAR CHART */}
-        <motion.div
-          whileHover={{
-            y: -4,
-          }}
-          className="rounded-[3rem] border border-white/10 bg-white/[0.03] backdrop-blur-3xl p-8"
-        >
-
-          <div className="flex items-center justify-between mb-8">
-
-            <div>
-
-              <h2 className="text-3xl font-black">
-                Risk Levels
-              </h2>
-
-              <p className="text-white/40 mt-2">
-                AI-detected risk distribution
-              </p>
-
-            </div>
-
-            <div className="text-5xl">
-              ⚠️
-            </div>
-
-          </div>
-
-          <div className="h-[320px]">
-
-            <ResponsiveContainer width="100%" height="100%">
-
-              <BarChart data={RISK_CHART}>
-
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#1e293b"
-                  vertical={false}
-                />
-
-                <XAxis
-                  dataKey="name"
-                  stroke="#94a3b8"
-                />
-
-                <YAxis hide />
-
-                <Tooltip />
-
-                <Bar
-                  dataKey="value"
-                  fill="#2563eb"
-                  radius={[10, 10, 0, 0]}
-                />
-
-              </BarChart>
-
-            </ResponsiveContainer>
-
-          </div>
-
-        </motion.div>
-
-      </section>
+      
 
       {/* TABLE */}
       <section className="rounded-[3rem] border border-white/10 bg-white/[0.03] backdrop-blur-3xl overflow-hidden">
@@ -408,9 +212,7 @@ function History() {
 
           </div>
 
-          <button className="h-14 px-8 rounded-2xl bg-white/[0.03] border border-white/10 hover:bg-white/[0.06] transition-all font-bold">
-            Download Logs
-          </button>
+        
 
         </div>
 
@@ -634,9 +436,7 @@ function History() {
                 Download Report
               </button>
 
-              <button className="px-7 py-4 rounded-2xl bg-white/[0.03] border border-white/10 hover:bg-white/[0.06] transition-all font-bold">
-                Share Analysis
-              </button>
+              
 
             </div>
 
