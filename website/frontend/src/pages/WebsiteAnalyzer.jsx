@@ -98,19 +98,7 @@ function WebsiteAnalyzer() {
       <PageHeader
         title="Website Analyzer"
         subtitle="AI-powered enterprise website privacy intelligence and legal risk detection."
-        actionButton={
-          <div className="flex gap-4">
-
-            <button className="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 transition-all font-bold shadow-xl shadow-blue-600/20">
-              AI Scan
-            </button>
-
-            <button className="px-6 py-3 rounded-2xl bg-white/[0.03] border border-white/10 hover:bg-white/[0.06] transition-all font-bold">
-              Generate Report
-            </button>
-
-          </div>
-        }
+       
       />
 
       {/* HERO */}
@@ -142,44 +130,12 @@ function WebsiteAnalyzer() {
 
           </div>
 
-          <AIStatusBadge status="Active" />
 
         </div>
 
       </section>
 
-      {/* STATS */}
-      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
-
-        <StatsCard
-          title="Sites Scanned"
-          value="28.4K"
-          growth="+18%"
-          icon="🌐"
-        />
-
-        <StatsCard
-          title="Privacy Risks"
-          value="6.1K"
-          growth="+14%"
-          icon="⚠️"
-        />
-
-        <StatsCard
-          title="Tracking Scripts"
-          value="12.8K"
-          growth="+32%"
-          icon="📡"
-        />
-
-        <StatsCard
-          title="AI Accuracy"
-          value="98.7%"
-          growth="+5%"
-          icon="🤖"
-        />
-
-      </section>
+      
 
       {/* URL SCANNER */}
       <section className="rounded-[3rem] border border-white/10 bg-white/[0.03] p-10 backdrop-blur-3xl mb-10">

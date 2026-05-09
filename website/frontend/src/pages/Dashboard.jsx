@@ -93,20 +93,7 @@ function Dashboard() {
       <PageHeader
         title="AI Security Dashboard"
         subtitle="Monitoring active legal and privacy risk intelligence."
-        actionButton={
-          <div className="flex items-center gap-4">
-            <AIStatusBadge status="Active" />
-
-            <button
-              onClick={() =>
-                navigate("/pdf-analyzer")
-              }
-              className="h-14 px-8 rounded-2xl bg-blue-600 hover:bg-blue-500 transition-all font-bold shadow-xl shadow-blue-600/20"
-            >
-              Analyze PDF
-            </button>
-          </div>
-        }
+        
       />
 
       {/* HERO */}
@@ -155,14 +142,6 @@ function Dashboard() {
               Scan Website
             </button>
 
-            <button
-              onClick={() =>
-                navigate("/report")
-              }
-              className="px-7 py-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-bold"
-            >
-              Generate Report
-            </button>
 
             <button
               onClick={() =>

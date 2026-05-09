@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "POLICYGUARD AI",
+  "version": "1.0.0",
+  "description": "AI Privacy Intelligence Extension",
+  "permissions": ["activeTab", "storage"],
+  "action": {
+    "default_popup": "index.html"
+  }
+}
