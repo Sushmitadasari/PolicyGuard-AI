@@ -6,10 +6,13 @@ import {
 import Landing from "../pages/Landing";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
-
 import Dashboard from "../pages/Dashboard";
 import PDFAnalyzer from "../pages/PDFAnalyzer";
+import PDFResultPage from "../pages/PDFResultPage";
+import PDFChatPage from "../pages/PDFChatPage";
 import WebsiteAnalyzer from "../pages/WebsiteAnalyzer";
+import WebsiteResultPage from "../pages/WebsiteResultPage";
+import WebsiteChatPage from "../pages/WebsiteChatPage";
 import History from "../pages/History";
 import Settings from "../pages/Settings";
 
@@ -55,10 +58,46 @@ function AppRoutes() {
       />
 
       <Route
+        path="/pdf-result"
+        element={
+          <ProtectedRoute>
+            <PDFResultPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/pdf-chat"
+        element={
+          <ProtectedRoute>
+            <PDFChatPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/website-analyzer"
         element={
           <ProtectedRoute>
             <WebsiteAnalyzer />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/website-result"
+        element={
+          <ProtectedRoute>
+            <WebsiteResultPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/website-chat"
+        element={
+          <ProtectedRoute>
+            <WebsiteChatPage />
           </ProtectedRoute>
         }
       />
@@ -72,7 +111,6 @@ function AppRoutes() {
         }
       />
 
-      
       <Route
         path="/settings"
         element={

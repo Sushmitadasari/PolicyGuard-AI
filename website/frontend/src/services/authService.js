@@ -1,18 +1,9 @@
-import axios from "axios";
+import api from "./api";
 
-const API =
-  "http://localhost:5000/api/auth";
+// Login user with email and password
+export const loginUser = (data) =>
+  api.post("/auth/login", data);
 
-export const registerUser =
-  (data) =>
-    axios.post(
-      `${API}/register`,
-      data
-    );
-
-export const loginUser =
-  (data) =>
-    axios.post(
-      `${API}/login`,
-      data
-    );
+// Register new user
+export const registerUser = (data) =>
+  api.post("/auth/register", data);

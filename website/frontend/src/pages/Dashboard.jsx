@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 import {
   ResponsiveContainer,
@@ -19,6 +19,8 @@ import {
 } from "framer-motion";
 
 import { Link, useNavigate } from "react-router-dom";
+import api from "../services/api";
+import { subscribeDashboardRefresh } from "../utils/dashboardEvents";
 
 /* REUSABLE COMPONENTS */
 import DashboardLayout from "../layouts/DashboardLayout";
@@ -85,6 +87,88 @@ const riskDistribution = [
 
 function Dashboard() {
   const navigate = useNavigate();
+
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [stats, setStats] = useState({
+    totalAnalyses: null,
+    averageRisk: null,
+    recentScans: analyticsData,
+    riskDistribution: riskDistribution,
+    aiAccuracy: null,
+  });
+
+  const isMounted = useRef(true);
+
+  const fetchStats = async () => {
+    setLoadingStats(true);
+    try {
+      const res = await api.get("/history/dashboard-stats");
+      const payload = res.data?.stats ?? res.stats ?? res.data ?? res;
+
+      // Helper: aggregate recent items (array of records) into {name: Month, scans: count}
+      const aggregateRecentItems = (items = []) => {
+        if (!Array.isArray(items)) return [];
+        const counts = {};
+        items.forEach((it) => {
+          const date = it.createdAt || it.date || it.metadata?.processedAt || null;
+          if (!date) return;
+          try {
+            const d = new Date(date);
+            if (Number.isNaN(d.getTime())) return;
+            const month = d.toLocaleString('en-US', { month: 'short' });
+            counts[month] = (counts[month] || 0) + 1;
+          } catch (e) {
+            // ignore
+          }
+        });
+        // Convert to array
+        return Object.keys(counts).map((m) => ({ name: m, scans: counts[m] }));
+      };
+
+      const totalAnalyses = payload?.totalAnalyses ?? payload?.total_analyses ?? payload?.total ?? payload?.totalCount ?? null;
+      const averageRisk = payload?.averageRiskScore ?? payload?.averageRisk ?? payload?.avgRisk ?? payload?.average_risk ?? null;
+      const confidence = payload?.averageConfidence ?? payload?.average_confidence ?? null;
+
+      const recentItemsRaw = Array.isArray(payload?.recentItems) ? payload.recentItems : Array.isArray(payload?.recent) ? payload.recent : [];
+      const recentScansData = aggregateRecentItems(recentItemsRaw);
+
+      const breakdownRaw = payload?.riskLevelBreakdown ?? payload?.risk_distribution ?? {};
+      const breakdownEntries = typeof breakdownRaw === 'object' && !Array.isArray(breakdownRaw) ? Object.entries(breakdownRaw) : [];
+      const sum = breakdownEntries.reduce((s, [, v]) => s + (Number(v) || 0), 0) || 0;
+      const distribution = breakdownEntries.map(([name, value]) => ({
+        name,
+        value: sum ? Math.round((Number(value) / sum) * 100) : 0,
+        color: name === 'Safe' ? COLORS.success : name === 'Warning' ? COLORS.warning : COLORS.danger,
+      }));
+
+      const aiAccuracy = payload?.aiAccuracy ?? payload?.ai_accuracy ?? payload?.modelAccuracy ?? null;
+
+      if (isMounted.current) {
+        setStats({
+          totalAnalyses,
+          averageRisk,
+          confidence,
+          recentScans: recentScansData,
+          riskDistribution: distribution,
+          aiAccuracy,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to load dashboard stats:", err);
+    } finally {
+      if (isMounted.current) setLoadingStats(false);
+    }
+  };
+
+  useEffect(() => {
+    isMounted.current = true;
+    fetchStats();
+    const unsubscribe = subscribeDashboardRefresh(() => fetchStats());
+    return () => {
+      isMounted.current = false;
+      unsubscribe();
+    };
+  }, []);
 
   return (
     <DashboardLayout>
@@ -163,29 +247,29 @@ function Dashboard() {
 
         <StatsCard
           title="Policies Analyzed"
-          value="12,430"
-          growth="+18%"
+          value={loadingStats ? "Loading..." : stats.totalAnalyses ?? "N/A"}
+          growth={loadingStats ? "" : ""}
           icon="📄"
         />
 
         <StatsCard
-          title="Risk Alerts"
-          value="1,280"
-          growth="+9%"
+          title="Average Risk"
+          value={loadingStats ? "Loading..." : stats.averageRisk != null ? `${Math.round(stats.averageRisk)}%` : "N/A"}
+          growth={""}
           icon="⚠️"
         />
 
         <StatsCard
-          title="Websites Scanned"
-          value="5,930"
-          growth="+22%"
+          title="Recent Scans"
+          value={loadingStats ? "Loading..." : Array.isArray(stats.recentScans) ? stats.recentScans.length : "N/A"}
+          growth={""}
           icon="🌐"
         />
 
         <StatsCard
           title="AI Accuracy"
-          value="98.9%"
-          growth="+4%"
+          value={loadingStats ? "Loading..." : stats.aiAccuracy != null ? `${stats.aiAccuracy}%` : "N/A"}
+          growth={""}
           icon="🤖"
         />
 
@@ -220,9 +304,9 @@ function Dashboard() {
 
           <div className="h-[350px]">
 
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={350}>
 
-              <AreaChart data={analyticsData}>
+              <AreaChart data={stats.recentScans || analyticsData}>
 
                 <defs>
 
@@ -266,7 +350,7 @@ function Dashboard() {
 
                 <Area
                   type="monotone"
-                  dataKey="scans"
+                  dataKey={Array.isArray(stats.recentScans) && stats.recentScans[0] && 'scans' in stats.recentScans[0] ? 'scans' : 'value'}
                   stroke="#2563eb"
                   fillOpacity={1}
                   fill="url(#colorScans)"
@@ -298,23 +382,23 @@ function Dashboard() {
 
           <div className="h-[300px]">
 
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={300}>
 
               <PieChart>
 
                 <Pie
-                  data={riskDistribution}
+                  data={stats.riskDistribution || riskDistribution}
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
                   dataKey="value"
                 >
 
-                  {riskDistribution.map(
+                  {(stats.riskDistribution || riskDistribution).map(
                     (entry, index) => (
                       <Cell
                         key={index}
-                        fill={entry.color}
+                        fill={entry.color ?? entry.colorHex ?? entry.fill ?? COLORS.primary}
                       />
                     )
                   )}
@@ -331,7 +415,7 @@ function Dashboard() {
 
           <div className="space-y-4 mt-8">
 
-            {riskDistribution.map(
+            {(stats.riskDistribution || riskDistribution).map(
               (item, index) => (
                 <div
                   key={index}
@@ -343,7 +427,7 @@ function Dashboard() {
                     <div
                       className="w-3 h-3 rounded-full"
                       style={{
-                        background: item.color,
+                        background: item.color ?? item.colorHex ?? item.fill,
                       }}
                     />
 

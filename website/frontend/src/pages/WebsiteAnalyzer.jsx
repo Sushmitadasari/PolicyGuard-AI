@@ -18,6 +18,9 @@ import {
 import { motion } from "framer-motion";
 
 import DashboardLayout from "../layouts/DashboardLayout";
+import api from "../services/api";
+import { triggerDashboardRefresh } from "../utils/dashboardEvents";
+import { useNavigate } from "react-router-dom";
 
 import PageHeader from "../components/common/PageHeader";
 
@@ -63,26 +66,35 @@ function WebsiteAnalyzer() {
   const [error, setError] =
     useState("");
 
-  const startAnalysis = () => {
-    if (!url.trim()) {
-      setError(
-        "Please enter website URL."
-      );
+  const navigate = useNavigate();
 
+  const startAnalysis = async () => {
+    if (!url.trim()) {
+      setError("Please enter website URL.");
       return;
     }
 
     setError("");
-
     setLoading(true);
-
     setShowResults(false);
 
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const payload = { url: url.trim() };
+      const res = await api.post("/website/analyze", payload);
 
-      setShowResults(true);
-    }, 3500);
+      // notify dashboard to refresh
+      try { triggerDashboardRefresh(); } catch (_) {}
+
+      // on success navigate to result page and pass data
+      navigate("/website-result", { state: res.data });
+    } catch (err) {
+      console.error("Website analyze error:", err);
+      setError(
+        err?.response?.data?.message || "Failed to analyze website. Try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const quickAction = (

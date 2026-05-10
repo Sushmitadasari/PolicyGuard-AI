@@ -15,6 +15,8 @@ import {
 
 import { motion } from "framer-motion";
 
+import { useNavigate } from "react-router-dom";
+
 import DashboardLayout from "../layouts/DashboardLayout";
 
 import PageHeader from "../components/common/PageHeader";
@@ -24,6 +26,9 @@ import StatsCard from "../components/common/StatsCard";
 import UploadBox from "../components/common/UploadBox";
 
 import AIStatusBadge from "../components/common/AIStatusBadge";
+
+import { uploadPDF } from "../services/pdfService";
+import { triggerDashboardRefresh } from "../utils/dashboardEvents";
 
 const PIE_DATA = [
   { name: "Safe", value: 45 },
@@ -61,6 +66,8 @@ const CLAUSES = [
 ];
 
 function PDFAnalyzer() {
+  const navigate = useNavigate();
+
   const [uploadProgress,
     setUploadProgress] =
     useState(0);
@@ -72,6 +79,10 @@ function PDFAnalyzer() {
   const [analyzing,
     setAnalyzing] =
     useState(false);
+
+  const [error,
+    setError] =
+    useState("");
 
   const [aiSummary,
     setAiSummary] =
@@ -85,43 +96,51 @@ function PDFAnalyzer() {
     setSelectedTab] =
     useState("overview");
 
-  const handleUpload = (file) => {
+  const handleUpload = async (file) => {
     if (!file) return;
 
     setFileName(file.name);
-
     setAnalyzing(true);
-
+    setError("");
     setAiSummary("");
+    setUploadProgress(0);
 
-    let progress = 0;
-
-    const interval =
-      setInterval(() => {
-
-        progress += 5;
-
-        setUploadProgress(progress);
-
-        if (progress >= 100) {
-
-          clearInterval(interval);
-
-          setTimeout(() => {
-
-            setAnalyzing(false);
-
-            setAiSummary(
-              "AI detected multiple risky clauses related to tracking, liability limitations, and automatic renewals. Policy contains moderate-to-high legal exposure risks."
-            );
-
-            setRiskScore(87);
-
-          }, 1200);
-
+    try {
+      // Show progress animation
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress += Math.random() * 30;
+        if (progress < 90) {
+          setUploadProgress(Math.min(progress, 90));
         }
+      }, 300);
 
-      }, 180);
+      // Call backend API
+      const response = await uploadPDF(file);
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
+      // Backend returns analysis data
+      const analysisData = response.data;
+
+      // Notify dashboard to refresh immediately
+      try { triggerDashboardRefresh(); } catch (_) {}
+
+      // Navigate to result page with data
+      setTimeout(() => {
+        navigate("/pdf-result", {
+          state: analysisData,
+        });
+      }, 500);
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          "Failed to upload and analyze PDF. Please try again."
+      );
+      setAnalyzing(false);
+      setUploadProgress(0);
+    }
   };
 
   return (
@@ -166,7 +185,12 @@ function PDFAnalyzer() {
 
       </section>
 
-      
+      {/* ERROR MESSAGE */}
+      {error && (
+        <div className="mb-6 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-red-400 font-semibold">
+          {error}
+        </div>
+      )}
 
       {/* UPLOAD + AI */}
       <section className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-10">

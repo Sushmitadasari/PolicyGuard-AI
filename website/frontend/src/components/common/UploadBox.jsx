@@ -5,6 +5,13 @@ function UploadBox({
   acceptedFiles,
   onUpload,
 }) {
+  const handleChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onUpload(file);
+    }
+  };
+
   return (
     <motion.label
       whileHover={{
@@ -16,7 +23,7 @@ function UploadBox({
         type="file"
         accept={acceptedFiles}
         className="hidden"
-        onChange={onUpload}
+        onChange={handleChange}
       />
 
       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5" />
