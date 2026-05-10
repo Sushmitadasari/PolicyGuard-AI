@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
+import DocumentPicker from 'react-native-document-picker';
 import {
   ActivityIndicator,
   Animated,
@@ -9,6 +10,7 @@ import {
   LayoutAnimation,
   Modal,
   NativeModules,
+  NativeEventEmitter,
   Platform,
   Pressable,
   ScrollView,
@@ -22,11 +24,13 @@ import {
 } from 'react-native';
 
 import { NavigationContainer } from '@react-navigation/native';
-import { createDrawerNavigator, DrawerContentScrollView } from '@react-navigation/drawer';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import axios from 'axios';
 
 const { InstalledApps } = NativeModules;
-const Drawer = createDrawerNavigator();
+const eventEmitter = new NativeEventEmitter(InstalledApps);
+const Tab = createBottomTabNavigator();
 
 const RISK_RULES = [
   { keywords: ['vpn', 'proxy', 'tunnel'], points: 35, reason: 'This app can route your internet traffic through another service.' },
@@ -56,49 +60,12 @@ const MENU_ITEMS = [
   { id: 'settings', label: 'Settings', icon: '⚙️' },
 ];
 
-const clampScore = (value) => Math.max(5, Math.min(95, value));
-
 function safeLines(value) {
   return (value || '').replace(/\s+/g, ' ').trim();
 }
 
-function hashValue(input) {
-  let hash = 0;
-  for (let index = 0; index < input.length; index += 1) {
-    hash = (hash * 31 + input.charCodeAt(index)) % 9973;
-  }
-  return hash;
-}
-
-function getPrivacyPolicyInfo(packageName, appName) {
-  const knownUrl = KNOWN_PRIVACY_URLS[packageName];
-
-  if (knownUrl) {
-    return {
-      privacyPolicyUrl: knownUrl,
-      policySource: 'known',
-      privacySearchUrl: null,
-    };
-  }
-
-  if (packageName.startsWith('com.google.android')) {
-    return {
-      privacyPolicyUrl: 'https://policies.google.com/privacy',
-      policySource: 'known',
-      privacySearchUrl: null,
-    };
-  }
-
-  return {
-    privacyPolicyUrl: null,
-    policySource: 'search',
-    privacySearchUrl: `https://www.google.com/search?q=${encodeURIComponent(`${appName} ${packageName} privacy policy`)}`,
-  };
-}
-
 function permissionLabel(permission) {
   const value = permission.toLowerCase();
-
   if (value.includes('camera')) return 'Camera';
   if (value.includes('contacts')) return 'Contacts';
   if (value.includes('location')) return value.includes('background') ? 'Background location' : 'Location';
@@ -107,114 +74,100 @@ function permissionLabel(permission) {
   if (value.includes('storage') || value.includes('media') || value.includes('files')) return 'Files';
   if (value.includes('phone') || value.includes('call')) return 'Phone';
   if (value.includes('activity')) return 'Activity';
-  if (value.includes('network')) return 'Network';
-
+  if (value.includes('network') || value.includes('internet')) return 'Network';
   const segment = permission.split('.').pop() || permission;
   return segment.replace(/_/g, ' ');
 }
 
 function humanReasonFromPermissions(permissions = []) {
-  const list = permissions.map((permission) => permission.toLowerCase());
-  const reasons = [];
+  const list = permissions.map((p) => p.toLowerCase());
+  const sensitive = [];
+  
+  const hasCamera = list.some((p) => p.includes('camera'));
+  const hasMic = list.some((p) => p.includes('microphone') || p.includes('record_audio'));
+  const hasInternet = list.some((p) => p.includes('internet') || p.includes('network'));
+  const hasLocation = list.some((p) => p.includes('location'));
+  const hasContacts = list.some((p) => p.includes('contacts'));
+  const hasStorage = list.some((p) => p.includes('storage') || p.includes('media'));
+  const hasSMS = list.some((p) => p.includes('sms'));
+  const hasBackground = list.some((p) => p.includes('background'));
 
-  if (list.some((permission) => permission.includes('background_location'))) {
-    reasons.push('This app can access your location in the background.');
-  } else if (list.some((permission) => permission.includes('location'))) {
-    reasons.push('This app can access your location.');
+  if (hasCamera && hasMic && hasInternet) {
+    sensitive.push('This app can capture media and communicate data through network access.');
+  } else if (hasCamera && hasMic) {
+    sensitive.push('This app can access camera and microphone which may affect personal privacy.');
+  } else {
+    if (hasCamera) sensitive.push('This app can access the camera to capture images or video.');
+    if (hasMic) sensitive.push('This app can access the microphone to record audio.');
   }
 
-  if (list.some((permission) => permission.includes('record_audio') || permission.includes('microphone'))) {
-    reasons.push('This app requests microphone access.');
+  if (hasLocation && hasContacts) {
+    sensitive.push('This app can access both location and personal contact information.');
+  } else {
+    if (hasLocation) sensitive.push('This app tracks device location and may monitor movement activity.');
+    if (hasContacts) sensitive.push('This app can access contacts and communication-related information.');
   }
 
-  if (list.some((permission) => permission.includes('camera'))) {
-    reasons.push('This app can use your camera.');
-  }
+  if (hasStorage) sensitive.push('This app can read and modify stored files on the device.');
+  if (hasInternet && !hasCamera) sensitive.push('This app communicates through internet/network connections.');
+  if (hasSMS) sensitive.push('This app can access messages and verification-related data.');
+  if (hasBackground) sensitive.push('This app may continue running in the background.');
 
-  if (list.some((permission) => permission.includes('contacts'))) {
-    reasons.push('This app may read your contacts.');
+  if (sensitive.length === 0) {
+    sensitive.push('This app requires standard permissions with no obvious privacy concerns.');
   }
-
-  if (list.some((permission) => permission.includes('sms'))) {
-    reasons.push('This app can read or send messages.');
-  }
-
-  if (list.some((permission) => permission.includes('storage') || permission.includes('media') || permission.includes('files'))) {
-    reasons.push('This app can access photos and files.');
-  }
-
-  if (list.some((permission) => permission.includes('phone') || permission.includes('call'))) {
-    reasons.push('This app can see phone and call details.');
-  }
-
-  if (list.some((permission) => permission.includes('network'))) {
-    reasons.push('This app may monitor your network activity.');
-  }
-
-  return reasons;
+  
+  return sensitive;
 }
 
-function getRiskAssessment(packageName, appName, permissions = [], scanSeed = 0) {
+function getRiskAssessment(packageName, appName, permissions = []) {
   const identity = `${packageName} ${appName}`.toLowerCase();
-  const policyInfo = getPrivacyPolicyInfo(packageName, appName);
   const reasons = [];
-  let score = 15;
+  let score = 0;
 
-  if (policyInfo.privacyPolicyUrl) {
-    score -= 8;
-  } else {
-    score += 18;
-  }
-
-  if (packageName.split('.').length < 3) {
-    score += 10;
-  }
+  const list = permissions.map((p) => p.toLowerCase());
+  if (list.some((p) => p.includes('camera'))) score += 15;
+  if (list.some((p) => p.includes('microphone') || p.includes('record_audio'))) score += 15;
+  if (list.some((p) => p.includes('sms'))) score += 20;
+  if (list.some((p) => p.includes('contacts'))) score += 15;
+  if (list.some((p) => p.includes('location'))) score += 10;
+  if (list.some((p) => p.includes('storage') || p.includes('media'))) score += 10;
 
   RISK_RULES.forEach((rule) => {
-    const hasMatch = rule.keywords.some((keyword) => identity.includes(keyword));
-    if (hasMatch) {
+    if (rule.keywords.some((keyword) => identity.includes(keyword))) {
       score += rule.points;
       reasons.push(rule.reason);
     }
   });
 
-  humanReasonFromPermissions(permissions).slice(0, 2).forEach((reason) => reasons.push(reason));
+  const permissionReasons = humanReasonFromPermissions(permissions);
+  reasons.push(...permissionReasons);
 
-  if (policyInfo.privacyPolicyUrl) {
-    reasons.unshift('A privacy policy was found for this app.');
-  } else {
-    reasons.unshift('We could not find a direct privacy policy link for this app.');
-  }
-
-  const jitter = ((hashValue(identity) + scanSeed) % 7) - 3;
-  score += jitter;
-
-  if (reasons.length === 1) {
-    reasons.push('No obvious privacy concerns were detected from the app identity.');
-  }
+  score = Math.min(100, Math.max(0, score));
 
   return {
-    score: clampScore(score),
+    score,
+    risk: getRiskLabel(score),
     reasons,
-    policyInfo,
   };
 }
 
 function getRiskLabel(score) {
-  if (score >= 70) return 'High Risk';
-  if (score >= 40) return 'Medium Risk';
-  return 'Low Risk';
+  if (score >= 71) return 'High Risk';
+  if (score >= 46) return 'Medium Risk';
+  if (score >= 26) return 'Low Risk';
+  return 'Safe';
 }
 
 function getSafetyStatus(score) {
-  if (score >= 75) return 'Good';
-  if (score >= 50) return 'Moderate';
-  return 'At Risk';
+  if (score >= 71) return 'At Risk';
+  if (score >= 46) return 'Moderate';
+  return 'Good';
 }
 
 function riskColor(score) {
-  if (score >= 70) return '#ef4444';
-  if (score >= 40) return '#f59e0b';
+  if (score >= 71) return '#ef4444';
+  if (score >= 46) return '#f59e0b';
   return '#10b981';
 }
 
@@ -322,24 +275,7 @@ function PremiumSidebar({ navigation, state, apps, isScanning, onScan }) {
         })}
       </View>
 
-      <View style={styles.sidebarFooter}>
-        <View style={styles.footerCard}>
-          <Text style={styles.footerLabel}>Active Alerts</Text>
-          <Text style={styles.footerValue}>{apps.filter((a) => a.score >= 70).length}</Text>
-        </View>
-        <View style={styles.footerCard}>
-          <Text style={styles.footerLabel}>Apps Scanned</Text>
-          <Text style={styles.footerValue}>{apps.length}</Text>
-        </View>
-      </View>
 
-      <View style={styles.sidebarMonitoring}>
-        <View style={styles.monitoringDot} />
-        <Text style={styles.monitoringText}>Live Monitoring</Text>
-      </View>
-    </DrawerContentScrollView>
-  );
-}
 
 function ScreenHeader({ title, onScan, isScanning }) {
   const insets = useSafeAreaInsets();
@@ -393,7 +329,7 @@ function DashboardCard({ icon, label, value, subtitle, color }) {
   );
 }
 
-function OverviewCard({ overallSafety, safetyStatus, totalApps, highRiskCount, safeCount }) {
+function OverviewCard({ overallSafety, safetyStatus, totalApps }) {
   return (
     <View style={styles.overallCard}>
       <View style={styles.overallLeft}>
@@ -454,7 +390,7 @@ function AppCard({ app, onPressDetails, onAlertPress }) {
 
       <View style={styles.permissionHeaderRow}>
         <Text style={styles.sectionLabel}>Permissions</Text>
-        {app.score >= 70 ? (
+        {app.score >= 71 ? (
           <TouchableOpacity onPress={onAlertPress} activeOpacity={0.8}>
             <Text style={styles.alertLink}>View alert</Text>
           </TouchableOpacity>
@@ -487,8 +423,8 @@ function ScreenWrapper({ children }) {
 }
 
 function DashboardScreen({ apps, overallSafety, safetyStatus, isScanning, onScan, onOpenDetails, onOpenAlert, navigation }) {
-  const highRiskCount = apps.filter((a) => a.score >= 70).length;
-  const safeCount = apps.filter((a) => a.score < 30).length;
+  const highRiskCount = apps.filter((a) => a.score >= 71).length;
+  const safeCount = apps.filter((a) => a.score < 26).length;
 
   return (
     <ScreenWrapper>
@@ -587,15 +523,55 @@ function AlertsScreen({ apps, onScan, onOpenDetails, onOpenAlert, isScanning }) 
 }
 
 function AIAnalysisScreen({ onScan, isScanning }) {
+  const [file, setFile] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
+
+  const handlePickDocument = async () => {
+    try {
+      const res = await DocumentPicker.pick({
+        type: [DocumentPicker.types.pdf, DocumentPicker.types.doc, DocumentPicker.types.docx],
+      });
+      setFile(res[0]);
+      setAnalyzing(true);
+      setTimeout(() => setAnalyzing(false), 3000);
+    } catch (err) {
+      if (!DocumentPicker.isCancel(err)) {
+        console.log(err);
+      }
+    }
+  };
+
   return (
     <ScreenWrapper>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <ScreenHeader title="AI Analysis" onScan={onScan} isScanning={isScanning} />
+        
         <View style={styles.comingSoonCard}>
-          <Text style={styles.comingSoonTitle}>🤖 Advanced AI Analysis</Text>
+          <Text style={styles.comingSoonTitle}>📄 AI Document Text Extractor</Text>
           <Text style={styles.comingSoonText}>
-            Deep privacy policy analysis and behavioral risk detection coming soon. Our AI engine will scan privacy policies, detect unsafe clauses, and identify tracking patterns.
+            Upload a Privacy Policy or Terms of Service document (PDF/DOCX). Our AI engine will extract the text, identify risky keywords, and generate a privacy score.
           </Text>
+          
+          <TouchableOpacity style={styles.uploadButton} onPress={handlePickDocument} activeOpacity={0.8}>
+            <Text style={styles.uploadButtonText}>Upload Document</Text>
+          </TouchableOpacity>
+
+          {file && (
+            <View style={styles.fileCard}>
+              <Text style={styles.fileName}>Selected: {file.name}</Text>
+              {analyzing ? (
+                <View style={styles.analyzingRow}>
+                  <ActivityIndicator size="small" color="#FF6B1A" />
+                  <Text style={styles.analyzingText}>Extracting and analyzing...</Text>
+                </View>
+              ) : (
+                <View style={styles.analysisResult}>
+                  <Text style={styles.resultTitle}>Ready for Backend Analysis</Text>
+                  <Text style={styles.resultText}>Connect this feature to your Node.js backend to get the final Risk Score and Summary!</Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
       </ScrollView>
     </ScreenWrapper>
@@ -603,10 +579,10 @@ function AIAnalysisScreen({ onScan, isScanning }) {
 }
 
 function ReportsScreen({ apps, onScan, isScanning }) {
-  const highRiskCount = apps.filter((a) => a.score >= 70).length;
-  const mediumRiskCount = apps.filter((a) => a.score >= 40 && a.score < 70).length;
-  const lowRiskCount = apps.filter((a) => a.score < 40).length;
-  const avgRisk = apps.length > 0 ? Math.round(apps.reduce((sum, a) => sum + a.score, 0) / apps.length) : 0;
+  const highRiskCount = apps.filter((a) => a.score >= 71).length;
+  const mediumRiskCount = apps.filter((a) => a.score >= 46 && a.score < 71).length;
+  const lowRiskCount = apps.filter((a) => a.score < 46).length;
+  const avgRisk = apps.length > 0 ? Number((apps.reduce((sum, a) => sum + a.score, 0) / apps.length).toFixed(0)) : 0;
 
   return (
     <ScreenWrapper>
@@ -783,21 +759,43 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => {
-    async function loadApps() {
-      try {
-        const installedApps = InstalledApps?.getInstalledApps ? await InstalledApps.getInstalledApps() : [];
-        setApps(formatApps(installedApps, 0));
-      } catch (error) {
-        console.log(error);
-      } finally {
-        setLoading(false);
-      }
+  async function refreshApps() {
+    try {
+      const installedApps = InstalledApps?.getInstalledApps ? await InstalledApps.getInstalledApps() : [];
+      setApps(installedApps.map(app => ({
+        id: `${app.packageName}-${Math.random()}`,
+        name: app.appName,
+        packageName: app.packageName,
+        icon: app.icon,
+        permissions: app.permissions || [],
+        ...getRiskAssessment(app.packageName, app.appName, app.permissions || [])
+      })));
+    } catch (error) {
+      console.log(error);
     }
+  }
 
-    loadApps();
+  useEffect(() => {
+    refreshApps().finally(() => setLoading(false));
+
+    const installListener = eventEmitter.addListener('onAppInstalled', async (packageName) => {
+      showSnackbar(`Analyzing newly installed app: ${packageName}`);
+      await refreshApps();
+      const installedApps = InstalledApps?.getInstalledApps ? await InstalledApps.getInstalledApps() : [];
+      const newlyInstalled = installedApps.find(a => a.packageName === packageName);
+      if (newlyInstalled) {
+        const assessment = getRiskAssessment(newlyInstalled.packageName, newlyInstalled.appName, newlyInstalled.permissions || []);
+        if (assessment.score >= 46) {
+          setAlertApp({
+            ...newlyInstalled,
+            ...assessment
+          });
+        }
+      }
+    });
 
     return () => {
+      installListener.remove();
       if (snackbarTimer.current) clearTimeout(snackbarTimer.current);
       if (scanTimer.current) clearTimeout(scanTimer.current);
     };
@@ -809,8 +807,8 @@ export default function App() {
     return orderedApps.reduce((total, app) => total + app.score, 0) / orderedApps.length;
   }, [orderedApps]);
 
-  const overallSafety = clampScore(Math.round(100 - averageRisk));
-  const safetyStatus = getSafetyStatus(overallSafety);
+  const overallSafety = Math.round(100 - averageRisk);
+  const safetyStatus = getSafetyStatus(100 - overallSafety); // The risk is inverted for safety status
   const highRiskApps = useMemo(() => orderedApps.filter((app) => app.score >= 70), [orderedApps]);
 
   function showSnackbar(message) {
@@ -828,15 +826,7 @@ export default function App() {
     }, 2400);
   }
 
-  async function refreshApps(nextSeed) {
-    try {
-      const installedApps = InstalledApps?.getInstalledApps ? await InstalledApps.getInstalledApps() : [];
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setApps(formatApps(installedApps, nextSeed));
-    } catch (error) {
-      console.log(error);
-    }
-  }
+
 
   async function handleScan() {
     if (isScanning) return;
@@ -847,11 +837,9 @@ export default function App() {
 
     if (scanTimer.current) clearTimeout(scanTimer.current);
 
-    const nextSeed = scanSeed + 1;
-    setScanSeed(nextSeed);
-
     scanTimer.current = setTimeout(async () => {
-      await refreshApps(nextSeed);
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      await refreshApps();
       setIsScanning(false);
       showSnackbar('Privacy scan completed');
     }, 1600);
@@ -866,28 +854,25 @@ export default function App() {
           <Text style={styles.loadingText}>Loading privacy scan...</Text>
         </View>
       ) : (
-        <Drawer.Navigator
+        <Tab.Navigator
           screenOptions={{
             headerShown: false,
-            drawerType: 'slide',
-            drawerStyle: {
-              width: 280,
-              backgroundColor: '#07122A',
+            tabBarStyle: {
+              backgroundColor: '#071029',
+              borderTopWidth: 1,
+              borderTopColor: 'rgba(255,255,255,0.05)',
+              height: 60,
+              paddingBottom: 8,
             },
-            sceneContainerStyle: {
-              backgroundColor: '#07122A',
-            },
+            tabBarActiveTintColor: '#FF6B1A',
+            tabBarInactiveTintColor: '#94a3b8',
+            sceneStyle: { backgroundColor: '#07122A' },
           }}
-          drawerContent={(props) => (
-            <PremiumSidebar
-              {...props}
-              apps={orderedApps}
-              isScanning={isScanning}
-              onScan={handleScan}
-            />
-          )}
         >
-          <Drawer.Screen name="Dashboard">
+          <Tab.Screen 
+            name="Home" 
+            options={{ tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>🛡️</Text> }}
+          >
             {({ navigation }) => (
               <DashboardScreen
                 apps={orderedApps}
@@ -900,21 +885,12 @@ export default function App() {
                 navigation={navigation}
               />
             )}
-          </Drawer.Screen>
+          </Tab.Screen>
 
-          <Drawer.Screen name="Applications">
-            {() => (
-              <ApplicationsScreen
-                apps={orderedApps}
-                onOpenDetails={setSelectedApp}
-                onOpenAlert={setAlertApp}
-                isScanning={isScanning}
-                onScan={handleScan}
-              />
-            )}
-          </Drawer.Screen>
-
-          <Drawer.Screen name="LiveScan">
+          <Tab.Screen 
+            name="Scan" 
+            options={{ tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>🔍</Text> }}
+          >
             {() => (
               <LiveScanScreen
                 apps={orderedApps}
@@ -926,9 +902,16 @@ export default function App() {
                 onOpenAlert={setAlertApp}
               />
             )}
-          </Drawer.Screen>
+          </Tab.Screen>
 
-          <Drawer.Screen name="Alerts">
+          <Tab.Screen 
+            name="Alerts" 
+            options={{
+              tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>⚠️</Text>,
+              tabBarBadge: highRiskApps.length > 0 ? highRiskApps.length : undefined,
+              tabBarBadgeStyle: { backgroundColor: '#ef4444' }
+            }}
+          >
             {() => (
               <AlertsScreen
                 apps={highRiskApps}
@@ -938,20 +921,16 @@ export default function App() {
                 isScanning={isScanning}
               />
             )}
-          </Drawer.Screen>
+          </Tab.Screen>
 
-          <Drawer.Screen name="AIAnalysis">
-            {() => <AIAnalysisScreen onScan={handleScan} isScanning={isScanning} />}
-          </Drawer.Screen>
-
-          <Drawer.Screen name="Reports">
-            {() => <ReportsScreen apps={orderedApps} onScan={handleScan} isScanning={isScanning} />}
-          </Drawer.Screen>
-
-          <Drawer.Screen name="Settings">
+          <Tab.Screen 
+            name="Settings" 
+            options={{ tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>⚙️</Text> }}
+          >
             {() => <SettingsScreen onScan={handleScan} isScanning={isScanning} />}
-          </Drawer.Screen>
-        </Drawer.Navigator>
+          </Tab.Screen>
+
+        </Tab.Navigator>
       )}
 
       <AlertSheet
@@ -1100,4 +1079,13 @@ const styles = StyleSheet.create({
   sheetFooterRow: { marginTop: 16, alignItems: 'flex-end' },
   snackbar: { position: 'absolute', left: 16, right: 16, bottom: 24, backgroundColor: 'rgba(7, 16, 41, 0.96)', borderRadius: 16, paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   snackbarText: { color: '#fff', fontWeight: '700', textAlign: 'center', fontSize: 13 },
+  uploadButton: { marginTop: 16, backgroundColor: '#FF6B1A', paddingVertical: 12, borderRadius: 14, alignItems: 'center' },
+  uploadButtonText: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  fileCard: { marginTop: 16, padding: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  fileName: { color: '#e2e8f0', fontSize: 13, fontWeight: '700', marginBottom: 8 },
+  analyzingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  analyzingText: { color: '#cbd5e1', fontSize: 12 },
+  analysisResult: { marginTop: 8, padding: 10, backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: 8, borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.2)' },
+  resultTitle: { color: '#10b981', fontWeight: '800', fontSize: 12, marginBottom: 4 },
+  resultText: { color: '#cbd5e1', fontSize: 11, lineHeight: 16 },
 });
