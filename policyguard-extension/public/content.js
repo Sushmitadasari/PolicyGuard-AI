@@ -176,10 +176,10 @@ if (matchedLinks.length > 0) {
       button.addEventListener("click", () => {
 
         // OPEN YOUR DASHBOARD
-        window.open(
-          "http://localhost:5173",
-          "_blank"
-        );
+       window.open(
+  chrome.runtime.getURL("dashboard.html"),
+  "_blank"
+);
 
       });
 
