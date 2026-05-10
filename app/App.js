@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-import DocumentPicker from 'react-native-document-picker';
 import {
   ActivityIndicator,
   Animated,
@@ -11,12 +10,15 @@ import {
   Modal,
   NativeModules,
   NativeEventEmitter,
+  DeviceEventEmitter,
+  PermissionsAndroid,
   Platform,
   Pressable,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   ToastAndroid,
   TouchableOpacity,
   UIManager,
@@ -25,10 +27,10 @@ import {
 
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets, SafeAreaProvider } from 'react-native-safe-area-context';
 import axios from 'axios';
 
-const { InstalledApps } = NativeModules;
+const { InstalledApps, AppInstallationListener } = NativeModules;
 const eventEmitter = new NativeEventEmitter(InstalledApps);
 const Tab = createBottomTabNavigator();
 
@@ -221,94 +223,17 @@ function formatApps(installedApps, scanSeed = 0) {
   });
 }
 
-function PremiumSidebar({ navigation, state, apps, isScanning, onScan }) {
-  const [activeMenu, setActiveMenu] = useState('dashboard');
 
-  useEffect(() => {
-    const currentRoute = state.routes[state.index]?.name;
-    setActiveMenu(currentRoute?.toLowerCase() || 'dashboard');
-  }, [state]);
-
-  const handleMenuPress = (menuId, screenName) => {
-    setActiveMenu(menuId);
-    navigation.navigate(screenName);
-  };
-
-  const screenMapping = {
-    'dashboard': 'Dashboard',
-    'applications': 'Applications',
-    'live-scan': 'LiveScan',
-    'alerts': 'Alerts',
-    'ai-analysis': 'AIAnalysis',
-    'reports': 'Reports',
-    'settings': 'Settings',
-  };
-
-  return (
-    <DrawerContentScrollView scrollEnabled={true} style={styles.sidebarContainer} contentContainerStyle={styles.sidebarContent}>
-      <View style={styles.sidebarHeader}>
-        <View style={styles.shieldLogo}>
-          <Text style={styles.shieldIcon}>🛡️</Text>
-        </View>
-        <Text style={styles.appNameSidebar}>Policy Guard AI</Text>
-        <Text style={styles.appSubSidebar}>Privacy Protection</Text>
-      </View>
-
-      <View style={styles.sidebarDivider} />
-
-      <View style={styles.menuList}>
-        {MENU_ITEMS.map((item) => {
-          const isActive = activeMenu === item.id;
-
-          return (
-            <View key={item.id} style={[styles.menuItemWrapper, isActive && styles.menuItemActiveWrapper]}>
-              <TouchableOpacity
-                style={[styles.menuItem, isActive && styles.menuItemActive]}
-                onPress={() => handleMenuPress(item.id, screenMapping[item.id])}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.menuIcon}>{item.icon}</Text>
-                <Text style={[styles.menuLabel, isActive && styles.menuLabelActive]}>{item.label}</Text>
-              </TouchableOpacity>
-            </View>
-          );
-        })}
-      </View>
-
-
-
-function ScreenHeader({ title, onScan, isScanning }) {
+function ScreenHeader() {
   const insets = useSafeAreaInsets();
-  const [currentTime, setCurrentTime] = useState(new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const timeStr = currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
   return (
     <View style={[styles.screenHeader, { paddingTop: Math.max(10, insets.top + 8) }]}>
       <View style={styles.headerTitleSection}>
-        <Text style={styles.headerTitle}>{title}</Text>
-        <View style={styles.liveIndicator}>
-          <View style={styles.liveIndicatorDot} />
-          <Text style={styles.liveIndicatorText}>Live Monitoring Active</Text>
+        <View style={styles.logoRow}>
+          <Image source={require('./android/icon.png')} style={styles.logoIconImage} />
+          <Text style={styles.brandTitle}>PolicyGuard AI</Text>
         </View>
-      </View>
-      <View style={styles.headerTimeSection}>
-        <Text style={styles.headerTime}>{timeStr}</Text>
-        {title.includes('Scan') ? (
-          <TouchableOpacity
-            style={[styles.headerScanBtn, isScanning && styles.headerScanBtnActive]}
-            onPress={onScan}
-            disabled={isScanning}
-            activeOpacity={0.85}
-          >
-            {isScanning ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.headerScanBtnText}>↻</Text>}
-          </TouchableOpacity>
-        ) : null}
       </View>
     </View>
   );
@@ -417,40 +342,67 @@ function ScreenWrapper({ children }) {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['right', 'left']}>
-      <View style={[styles.screen, { paddingBottom: insets.bottom + 12 }]}>{children}</View>
+      <View style={[styles.screen, { paddingBottom: 0 }]}>{children}</View>
     </SafeAreaView>
   );
 }
 
 function DashboardScreen({ apps, overallSafety, safetyStatus, isScanning, onScan, onOpenDetails, onOpenAlert, navigation }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  
   const highRiskCount = apps.filter((a) => a.score >= 71).length;
   const safeCount = apps.filter((a) => a.score < 26).length;
 
+  const filteredApps = useMemo(() => {
+    if (!searchQuery.trim()) return apps;
+    const q = searchQuery.toLowerCase().replace(/\s+/g, '');
+    return apps.filter(app => app.name.toLowerCase().replace(/\s+/g, '').includes(q));
+  }, [apps, searchQuery]);
+
   return (
     <ScreenWrapper>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <ScreenHeader title="Dashboard" onScan={onScan} isScanning={isScanning} />
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} stickyHeaderIndices={[1]}>
+        <ScreenHeader />
+
+        <View style={styles.searchFilterContainer}>
+          <View style={styles.searchBox}>
+            <Text style={styles.searchIcon}>🔍</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search applications..."
+              placeholderTextColor="#64748b"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+        </View>
 
         <View style={styles.dashboardGridSection}>
           <DashboardCard icon="⚠️" label="High Risk Apps" value={highRiskCount} color="#ef4444" />
           <DashboardCard icon="✅" label="Safe Applications" value={safeCount} color="#10b981" />
           <DashboardCard icon="📊" label="Total Applications" value={apps.length} color="#3b82f6" />
-          <DashboardCard icon="📱" label="Active Alerts" value={highRiskCount} color="#FF6B1A" />
+          <DashboardCard icon="📱" label="Active Alerts" value={highRiskCount} color="#2563EB" />
         </View>
 
         <OverviewCard overallSafety={overallSafety} safetyStatus={safetyStatus} totalApps={apps.length} highRiskCount={highRiskCount} safeCount={safeCount} />
 
-        <Text style={styles.sectionHeading}>Installed apps</Text>
-        {apps.slice(0, 5).map((app) => (
+        <Text style={styles.sectionHeading}>{searchQuery ? `${filteredApps.length} Apps Found` : 'Installed apps'}</Text>
+        {filteredApps.slice(0, 5).map((app) => (
           <AppCard key={app.id} app={app} onPressDetails={() => onOpenDetails(app)} onAlertPress={() => onOpenAlert(app)} />
         ))}
-        {apps.length > 5 ? (
+        {filteredApps.length === 0 && (
+          <View style={styles.emptyStateCard}>
+            <Text style={styles.emptyStateTitle}>No apps found</Text>
+            <Text style={styles.emptyStateText}>Try adjusting your search.</Text>
+          </View>
+        )}
+        {filteredApps.length > 5 ? (
           <TouchableOpacity
             style={styles.viewAllButton}
             onPress={() => navigation.navigate('Applications')}
             activeOpacity={0.85}
           >
-            <Text style={styles.viewAllButtonText}>View All {apps.length} Apps →</Text>
+            <Text style={styles.viewAllButtonText}>View All {filteredApps.length} Apps →</Text>
           </TouchableOpacity>
         ) : null}
       </ScrollView>
@@ -459,14 +411,64 @@ function DashboardScreen({ apps, overallSafety, safetyStatus, isScanning, onScan
 }
 
 function ApplicationsScreen({ apps, onOpenDetails, onOpenAlert, isScanning, onScan }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState('All');
+  
+  const filters = ['All', 'High Risk', 'Medium Risk', 'Low Risk', 'Safe'];
+
+  const filteredApps = useMemo(() => {
+    let result = apps;
+    if (activeFilter !== 'All') {
+      result = result.filter(app => app.risk === activeFilter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().replace(/\s+/g, '');
+      result = result.filter(app => app.name.toLowerCase().replace(/\s+/g, '').includes(q));
+    }
+    return result;
+  }, [apps, activeFilter, searchQuery]);
+
   return (
     <ScreenWrapper>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <ScreenHeader title="Applications" onScan={onScan} isScanning={isScanning} />
-        <Text style={styles.sectionHeading}>All installed apps</Text>
-        {apps.map((app) => (
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} stickyHeaderIndices={[1]}>
+        <ScreenHeader />
+        
+        <View style={styles.searchFilterContainer}>
+          <View style={styles.searchBox}>
+            <Text style={styles.searchIcon}>🔍</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search applications..."
+              placeholderTextColor="#64748b"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+          
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+            {filters.map(f => (
+              <TouchableOpacity 
+                key={f} 
+                style={[styles.filterChip, activeFilter === f && styles.filterChipActive]}
+                onPress={() => setActiveFilter(f)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.filterText, activeFilter === f && styles.filterTextActive]}>{f}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        <Text style={styles.sectionHeading}>{filteredApps.length} Apps Found</Text>
+        {filteredApps.map((app) => (
           <AppCard key={app.id} app={app} onPressDetails={() => onOpenDetails(app)} onAlertPress={() => onOpenAlert(app)} />
         ))}
+        {filteredApps.length === 0 && (
+          <View style={styles.emptyStateCard}>
+            <Text style={styles.emptyStateTitle}>No apps found</Text>
+            <Text style={styles.emptyStateText}>Try adjusting your search or risk filter.</Text>
+          </View>
+        )}
       </ScrollView>
     </ScreenWrapper>
   );
@@ -476,7 +478,7 @@ function LiveScanScreen({ apps, overallSafety, safetyStatus, isScanning, onScan,
   return (
     <ScreenWrapper>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <ScreenHeader title="Live Scan" onScan={onScan} isScanning={isScanning} />
+        <ScreenHeader />
 
         <View style={styles.scanHeroCard}>
           <Text style={styles.scanHeroScore}>{overallSafety}/100 · {safetyStatus}</Text>
@@ -505,7 +507,7 @@ function AlertsScreen({ apps, onScan, onOpenDetails, onOpenAlert, isScanning }) 
   return (
     <ScreenWrapper>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <ScreenHeader title="Alerts" onScan={onScan} isScanning={isScanning} />
+        <ScreenHeader />
         <Text style={styles.sectionHeading}>Privacy alerts</Text>
         {apps.length > 0 ? (
           apps.map((app) => (
@@ -526,25 +528,16 @@ function AIAnalysisScreen({ onScan, isScanning }) {
   const [file, setFile] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
 
-  const handlePickDocument = async () => {
-    try {
-      const res = await DocumentPicker.pick({
-        type: [DocumentPicker.types.pdf, DocumentPicker.types.doc, DocumentPicker.types.docx],
-      });
-      setFile(res[0]);
-      setAnalyzing(true);
-      setTimeout(() => setAnalyzing(false), 3000);
-    } catch (err) {
-      if (!DocumentPicker.isCancel(err)) {
-        console.log(err);
-      }
-    }
+  const handlePickDocument = () => {
+    setFile({ name: 'mock_privacy_policy.pdf' });
+    setAnalyzing(true);
+    setTimeout(() => setAnalyzing(false), 3000);
   };
 
   return (
     <ScreenWrapper>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <ScreenHeader title="AI Analysis" onScan={onScan} isScanning={isScanning} />
+        <ScreenHeader />
         
         <View style={styles.comingSoonCard}>
           <Text style={styles.comingSoonTitle}>📄 AI Document Text Extractor</Text>
@@ -561,7 +554,7 @@ function AIAnalysisScreen({ onScan, isScanning }) {
               <Text style={styles.fileName}>Selected: {file.name}</Text>
               {analyzing ? (
                 <View style={styles.analyzingRow}>
-                  <ActivityIndicator size="small" color="#FF6B1A" />
+                  <ActivityIndicator size="small" color="#2563EB" />
                   <Text style={styles.analyzingText}>Extracting and analyzing...</Text>
                 </View>
               ) : (
@@ -587,7 +580,7 @@ function ReportsScreen({ apps, onScan, isScanning }) {
   return (
     <ScreenWrapper>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <ScreenHeader title="Reports" onScan={onScan} isScanning={isScanning} />
+        <ScreenHeader />
 
         <View style={styles.reportsGrid}>
           <DashboardCard icon="🔴" label="High Risk" value={highRiskCount} subtitle="Requires attention" color="#ef4444" />
@@ -611,7 +604,7 @@ function SettingsScreen({ onScan, isScanning }) {
   return (
     <ScreenWrapper>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <ScreenHeader title="Settings" onScan={onScan} isScanning={isScanning} />
+        <ScreenHeader />
         <Text style={styles.sectionHeading}>App Settings</Text>
         <View style={styles.settingsCard}>
           <Text style={styles.settingsTitle}>Scan behavior</Text>
@@ -776,26 +769,54 @@ export default function App() {
   }
 
   useEffect(() => {
-    refreshApps().finally(() => setLoading(false));
-
-    const installListener = eventEmitter.addListener('onAppInstalled', async (packageName) => {
-      showSnackbar(`Analyzing newly installed app: ${packageName}`);
-      await refreshApps();
-      const installedApps = InstalledApps?.getInstalledApps ? await InstalledApps.getInstalledApps() : [];
-      const newlyInstalled = installedApps.find(a => a.packageName === packageName);
-      if (newlyInstalled) {
-        const assessment = getRiskAssessment(newlyInstalled.packageName, newlyInstalled.appName, newlyInstalled.permissions || []);
-        if (assessment.score >= 46) {
-          setAlertApp({
-            ...newlyInstalled,
-            ...assessment
-          });
+    async function setupApp() {
+      if (Platform.OS === 'android' && Platform.Version >= 33) {
+        try {
+          await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+        } catch (e) {
+          console.warn(e);
         }
       }
+      
+      if (AppInstallationListener) {
+        AppInstallationListener.startListening();
+      }
+      
+      refreshApps().finally(() => setLoading(false));
+    }
+    setupApp();
+
+    const installListener = DeviceEventEmitter.addListener('APP_INSTALLED', async (eventData) => {
+      const { packageName, appName, permissions } = eventData;
+      showSnackbar(`Analyzing newly installed app: ${appName}`);
+      
+      const assessment = getRiskAssessment(packageName, appName, permissions || []);
+      const newApp = {
+        id: `${packageName}-${Math.random()}`,
+        name: appName,
+        packageName: packageName,
+        icon: packageName,
+        permissions: permissions || [],
+        ...assessment
+      };
+      
+      setApps(prevApps => {
+        if (prevApps.some(a => a.packageName === packageName)) return prevApps;
+        return [newApp, ...prevApps];
+      });
+
+      if (assessment.score >= 46) {
+        setAlertApp(newApp);
+      }
+
+      await refreshApps();
     });
 
     return () => {
       installListener.remove();
+      if (AppInstallationListener) {
+        AppInstallationListener.stopListening();
+      }
       if (snackbarTimer.current) clearTimeout(snackbarTimer.current);
       if (scanTimer.current) clearTimeout(scanTimer.current);
     };
@@ -846,11 +867,12 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
-      <StatusBar barStyle="light-content" backgroundColor="#07122A" />
+    <SafeAreaProvider>
+      <NavigationContainer>
+      <StatusBar barStyle="light-content" backgroundColor="#0B0F19" />
       {loading ? (
         <View style={styles.loadingScreen}>
-          <ActivityIndicator size="large" color="#FF6B1A" />
+          <ActivityIndicator size="large" color="#2563EB" />
           <Text style={styles.loadingText}>Loading privacy scan...</Text>
         </View>
       ) : (
@@ -858,15 +880,15 @@ export default function App() {
           screenOptions={{
             headerShown: false,
             tabBarStyle: {
-              backgroundColor: '#071029',
+              backgroundColor: '#0B0F19',
               borderTopWidth: 1,
               borderTopColor: 'rgba(255,255,255,0.05)',
               height: 60,
               paddingBottom: 8,
             },
-            tabBarActiveTintColor: '#FF6B1A',
+            tabBarActiveTintColor: '#2563EB',
             tabBarInactiveTintColor: '#94a3b8',
-            sceneStyle: { backgroundColor: '#07122A' },
+            sceneStyle: { backgroundColor: '#0B0F19' },
           }}
         >
           <Tab.Screen 
@@ -887,6 +909,20 @@ export default function App() {
             )}
           </Tab.Screen>
 
+          <Tab.Screen 
+            name="Applications" 
+            options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+          >
+            {() => (
+              <ApplicationsScreen
+                apps={orderedApps}
+                onOpenDetails={setSelectedApp}
+                onOpenAlert={setAlertApp}
+                isScanning={isScanning}
+                onScan={handleScan}
+              />
+            )}
+          </Tab.Screen>
           <Tab.Screen 
             name="Scan" 
             options={{ tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>🔍</Text> }}
@@ -945,44 +981,57 @@ export default function App() {
 
       <DetailSheet app={selectedApp} onClose={() => setSelectedApp(null)} />
       <Snackbar message={snackbarMessage} visible={snackbarVisible} />
-    </NavigationContainer>
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  sidebarContainer: { flex: 1, backgroundColor: '#07122A' },
+  sidebarContainer: { flex: 1, backgroundColor: '#0B0F19' },
   sidebarContent: { paddingVertical: 20, paddingHorizontal: 16 },
   sidebarHeader: { alignItems: 'center', marginBottom: 20 },
-  shieldLogo: { width: 60, height: 60, borderRadius: 16, backgroundColor: 'rgba(255, 107, 26, 0.1)', alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255, 107, 26, 0.2)' },
+  shieldLogo: { width: 60, height: 60, borderRadius: 16, backgroundColor: 'rgba(37, 99, 235, 0.1)', alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 1, borderColor: 'rgba(37, 99, 235, 0.2)' },
   shieldIcon: { fontSize: 32 },
-  appNameSidebar: { color: '#FF6B1A', fontSize: 18, fontWeight: '900', letterSpacing: -0.4 },
+  appNameSidebar: { color: '#2563EB', fontSize: 18, fontWeight: '900', letterSpacing: -0.4 },
   appSubSidebar: { color: '#94a3b8', fontSize: 11, fontWeight: '600', marginTop: 4 },
   sidebarDivider: { height: 1, backgroundColor: 'rgba(255, 255, 255, 0.08)', marginBottom: 20 },
   menuList: { marginBottom: 40 },
   menuItemWrapper: { marginBottom: 8, borderRadius: 12 },
-  menuItemActiveWrapper: { backgroundColor: 'rgba(255, 107, 26, 0.08)', paddingHorizontal: 8, marginHorizontal: -8 },
+  menuItemActiveWrapper: { backgroundColor: 'rgba(37, 99, 235, 0.08)', paddingHorizontal: 8, marginHorizontal: -8 },
   menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 12, borderRadius: 12 },
-  menuItemActive: { backgroundColor: 'rgba(255, 107, 26, 0.15)', borderWidth: 1, borderColor: 'rgba(255, 107, 26, 0.3)' },
+  menuItemActive: { backgroundColor: 'rgba(37, 99, 235, 0.15)', borderWidth: 1, borderColor: 'rgba(37, 99, 235, 0.3)' },
   menuIcon: { fontSize: 18, marginRight: 12 },
   menuLabel: { color: '#cbd5e1', fontSize: 13, fontWeight: '700' },
-  menuLabelActive: { color: '#FF6B1A', fontWeight: '800' },
+  menuLabelActive: { color: '#2563EB', fontWeight: '800' },
   sidebarFooter: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   footerCard: { flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.04)', borderRadius: 12, padding: 10, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.05)' },
   footerLabel: { color: '#94a3b8', fontSize: 10, fontWeight: '600' },
-  footerValue: { color: '#FF6B1A', fontSize: 14, fontWeight: '900', marginTop: 4 },
+  footerValue: { color: '#2563EB', fontSize: 14, fontWeight: '900', marginTop: 4 },
   sidebarMonitoring: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(16, 185, 129, 0.1)', paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.2)' },
   monitoringDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#00D084', marginRight: 8, shadowColor: '#00D084', shadowOpacity: 0.6, shadowRadius: 4, shadowOffset: { width: 0, height: 0 }, elevation: 2 },
   monitoringText: { color: '#00D084', fontSize: 11, fontWeight: '700' },
 
   screenHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 16, paddingBottom: 12, gap: 12 },
   headerTitleSection: { flex: 1 },
-  headerTitle: { color: '#fff', fontSize: 26, fontWeight: '900', letterSpacing: -0.6 },
+  logoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  logoIconImage: { width: 36, height: 36, marginRight: 10 },
+  brandTitle: { color: '#fff', fontSize: 26, fontWeight: '900', letterSpacing: -0.5 },
+  
+  searchFilterContainer: { backgroundColor: '#0B0F19', paddingBottom: 12 },
+  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.05)', marginHorizontal: 16, borderRadius: 12, paddingHorizontal: 12, height: 46, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)', marginBottom: 12 },
+  searchIcon: { fontSize: 16, marginRight: 8 },
+  searchInput: { flex: 1, color: '#fff', fontSize: 14 },
+  filterScroll: { paddingHorizontal: 16, gap: 8 },
+  filterChip: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, backgroundColor: 'rgba(255, 255, 255, 0.05)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)' },
+  filterChipActive: { backgroundColor: 'rgba(37, 99, 235, 0.15)', borderColor: '#2563EB' },
+  filterText: { color: '#94a3b8', fontSize: 12, fontWeight: '600' },
+  filterTextActive: { color: '#2563EB', fontWeight: '800' },
   liveIndicator: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   liveIndicatorDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#00D084', marginRight: 6, shadowColor: '#00D084', shadowOpacity: 0.6, shadowRadius: 3, shadowOffset: { width: 0, height: 0 }, elevation: 2 },
   liveIndicatorText: { color: '#00D084', fontSize: 11, fontWeight: '700' },
   headerTimeSection: { alignItems: 'flex-end', gap: 8 },
   headerTime: { color: '#cbd5e1', fontSize: 13, fontWeight: '600' },
-  headerScanBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#FF6B1A', alignItems: 'center', justifyContent: 'center', shadowColor: '#FF6B1A', shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
+  headerScanBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#2563EB', alignItems: 'center', justifyContent: 'center', shadowColor: '#2563EB', shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
   headerScanBtnActive: { opacity: 0.8 },
   headerScanBtnText: { color: '#fff', fontSize: 18, fontWeight: '900' },
 
@@ -996,11 +1045,11 @@ const styles = StyleSheet.create({
   dashboardCardSubtitle: { color: '#94a3b8', fontSize: 10, marginTop: 2 },
   reportsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginHorizontal: 16, marginBottom: 16 },
 
-  appShell: { flex: 1, backgroundColor: '#07122A' },
-  safeArea: { flex: 1, backgroundColor: '#07122A' },
-  screen: { flex: 1, backgroundColor: '#07122A' },
+  appShell: { flex: 1, backgroundColor: '#0B0F19' },
+  safeArea: { flex: 1, backgroundColor: '#0B0F19' },
+  screen: { flex: 1, backgroundColor: '#0B0F19' },
   scrollContent: { paddingHorizontal: 0, paddingBottom: 20 },
-  loadingScreen: { flex: 1, backgroundColor: '#07122A', alignItems: 'center', justifyContent: 'center' },
+  loadingScreen: { flex: 1, backgroundColor: '#0B0F19', alignItems: 'center', justifyContent: 'center' },
   loadingText: { marginTop: 12, color: '#cbd5e1', fontSize: 14, fontWeight: '600' },
   overallCard: { backgroundColor: 'rgba(29, 78, 216, 0.08)', borderRadius: 20, padding: 18, marginHorizontal: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(29, 78, 216, 0.15)', flexDirection: 'row', alignItems: 'center' },
   overallLeft: { width: 102, alignItems: 'center', justifyContent: 'center' },
@@ -1033,24 +1082,24 @@ const styles = StyleSheet.create({
   sectionLabel: { color: '#cbd5e1', fontWeight: '800', fontSize: 12, marginBottom: 6 },
   whyUnsafeText: { color: '#d1d5db', fontSize: 12, lineHeight: 16 },
   permissionHeaderRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  alertLink: { color: '#FF6B1A', fontSize: 11, fontWeight: '800' },
+  alertLink: { color: '#2563EB', fontSize: 11, fontWeight: '800' },
   permissionsRow: { flexDirection: 'row', marginTop: 2, flexWrap: 'wrap' },
-  permissionChip: { backgroundColor: 'rgba(255, 107, 26, 0.1)', borderRadius: 999, paddingVertical: 4, paddingHorizontal: 8, marginRight: 6, marginTop: 6, borderWidth: 1, borderColor: 'rgba(255, 107, 26, 0.18)' },
-  permissionChipText: { color: '#FF6B1A', fontWeight: '700', fontSize: 10 },
+  permissionChip: { backgroundColor: 'rgba(37, 99, 235, 0.1)', borderRadius: 999, paddingVertical: 4, paddingHorizontal: 8, marginRight: 6, marginTop: 6, borderWidth: 1, borderColor: 'rgba(37, 99, 235, 0.18)' },
+  permissionChipText: { color: '#2563EB', fontWeight: '700', fontSize: 10 },
   noPermsText: { color: '#94a3b8', fontSize: 11 },
   scanHeroCard: { backgroundColor: 'rgba(255, 255, 255, 0.04)', borderRadius: 18, padding: 16, marginHorizontal: 16, marginBottom: 16, marginTop: 12, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.05)' },
-  scanHeroScore: { color: '#FF6B1A', fontWeight: '800', marginBottom: 8 },
+  scanHeroScore: { color: '#2563EB', fontWeight: '800', marginBottom: 8 },
   scanHeroText: { color: '#cbd5e1', fontSize: 12, lineHeight: 18 },
-  heroScanButton: { marginTop: 14, backgroundColor: '#FF6B1A', alignSelf: 'flex-start', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 14, flexDirection: 'row', gap: 8, alignItems: 'center' },
+  heroScanButton: { marginTop: 14, backgroundColor: '#2563EB', alignSelf: 'flex-start', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 14, flexDirection: 'row', gap: 8, alignItems: 'center' },
   heroScanButtonScanning: { opacity: 0.8 },
   heroScanButtonText: { color: '#fff', fontWeight: '800', fontSize: 12 },
-  viewAllButton: { marginHorizontal: 16, paddingVertical: 12, paddingHorizontal: 16, backgroundColor: 'rgba(255, 107, 26, 0.1)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255, 107, 26, 0.2)', alignItems: 'center', marginBottom: 12 },
-  viewAllButtonText: { color: '#FF6B1A', fontWeight: '800', fontSize: 12 },
+  viewAllButton: { marginHorizontal: 16, paddingVertical: 12, paddingHorizontal: 16, backgroundColor: 'rgba(37, 99, 235, 0.1)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(37, 99, 235, 0.2)', alignItems: 'center', marginBottom: 12 },
+  viewAllButtonText: { color: '#2563EB', fontWeight: '800', fontSize: 12 },
   emptyStateCard: { backgroundColor: 'rgba(255, 255, 255, 0.04)', borderRadius: 18, padding: 16, marginHorizontal: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   emptyStateTitle: { color: '#fff', fontWeight: '800', fontSize: 14 },
   emptyStateText: { color: '#cbd5e1', fontSize: 12, marginTop: 6 },
   comingSoonCard: { backgroundColor: 'rgba(255, 107, 26, 0.1)', borderRadius: 18, padding: 20, marginHorizontal: 16, marginTop: 12, borderWidth: 1, borderColor: 'rgba(255, 107, 26, 0.2)' },
-  comingSoonTitle: { color: '#FF6B1A', fontWeight: '900', fontSize: 16, marginBottom: 8 },
+  comingSoonTitle: { color: '#2563EB', fontWeight: '900', fontSize: 16, marginBottom: 8 },
   comingSoonText: { color: '#cbd5e1', fontSize: 12, lineHeight: 18 },
   reportCard: { backgroundColor: 'rgba(255, 255, 255, 0.04)', borderRadius: 18, padding: 16, marginHorizontal: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   reportTitle: { color: '#fff', fontWeight: '800', fontSize: 14, marginBottom: 8 },
@@ -1060,26 +1109,26 @@ const styles = StyleSheet.create({
   settingsText: { color: '#cbd5e1', fontSize: 12, lineHeight: 18 },
   sheetOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(4, 6, 23, 0.45)' },
   sheetBackdrop: { ...StyleSheet.absoluteFillObject },
-  sheetCard: { backgroundColor: '#071029', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 18, paddingTop: 10, paddingBottom: 18, borderTopWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  sheetCard: { backgroundColor: '#0B0F19', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 18, paddingTop: 10, paddingBottom: 18, borderTopWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   detailSheetCard: { paddingBottom: 24 },
   sheetHandle: { alignSelf: 'center', width: 52, height: 5, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.18)', marginBottom: 14 },
-  alertTitle: { color: '#FF6B1A', fontWeight: '900', fontSize: 18 },
+  alertTitle: { color: '#2563EB', fontWeight: '900', fontSize: 18 },
   alertApp: { color: 'white', fontWeight: '800', fontSize: 16, marginTop: 6 },
   alertScore: { color: '#ef4444', marginTop: 6, fontWeight: '700', marginBottom: 12 },
   alertReason: { color: '#d1d5db', fontSize: 12, lineHeight: 18, marginBottom: 4 },
   sheetButtonRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
-  sheetPrimaryButton: { flex: 1, backgroundColor: '#FF6B1A', paddingVertical: 12, borderRadius: 14, alignItems: 'center' },
+  sheetPrimaryButton: { flex: 1, backgroundColor: '#2563EB', paddingVertical: 12, borderRadius: 14, alignItems: 'center' },
   sheetPrimaryButtonText: { color: '#fff', fontWeight: '800', fontSize: 12 },
   sheetSecondaryButton: { flex: 1, backgroundColor: 'rgba(255,255,255,0.03)', paddingVertical: 12, borderRadius: 14, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   sheetSecondaryButtonText: { color: '#cbd5e1', fontWeight: '800', fontSize: 12 },
   detailTitle: { color: 'white', fontWeight: '900', fontSize: 18 },
-  detailScore: { color: '#FF6B1A', marginTop: 6, fontWeight: '700', marginBottom: 12 },
+  detailScore: { color: '#2563EB', marginTop: 6, fontWeight: '700', marginBottom: 12 },
   detailSummary: { color: '#d1d5db', fontSize: 12, lineHeight: 18, marginBottom: 12 },
   detailBullet: { color: '#cbd5e1', fontSize: 12, lineHeight: 18, marginBottom: 5 },
   sheetFooterRow: { marginTop: 16, alignItems: 'flex-end' },
   snackbar: { position: 'absolute', left: 16, right: 16, bottom: 24, backgroundColor: 'rgba(7, 16, 41, 0.96)', borderRadius: 16, paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   snackbarText: { color: '#fff', fontWeight: '700', textAlign: 'center', fontSize: 13 },
-  uploadButton: { marginTop: 16, backgroundColor: '#FF6B1A', paddingVertical: 12, borderRadius: 14, alignItems: 'center' },
+  uploadButton: { marginTop: 16, backgroundColor: '#2563EB', paddingVertical: 12, borderRadius: 14, alignItems: 'center' },
   uploadButtonText: { color: '#fff', fontWeight: '800', fontSize: 14 },
   fileCard: { marginTop: 16, padding: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   fileName: { color: '#e2e8f0', fontSize: 13, fontWeight: '700', marginBottom: 8 },
