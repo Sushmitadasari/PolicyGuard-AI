@@ -1,13 +1,11 @@
-chrome.runtime.onMessage.addListener(
-  (message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message) => {
 
-    if (message.type === "OPEN_POPUP") {
+  if (message.type === "OPEN_EXTENSION") {
 
-      chrome.tabs.create({
-        url: chrome.runtime.getURL("index.html"),
-      });
-
-    }
+    chrome.tabs.create({
+      url: chrome.runtime.getURL("index.html"),
+    });
 
   }
-);
+
+});

@@ -9,12 +9,17 @@
 
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "tabs"
   ],
 
   "host_permissions": [
     "<all_urls>"
   ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
 
   "action": {
     "default_popup": "index.html"
@@ -24,13 +29,6 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"]
-    }
-  ],
-
-  "web_accessible_resources": [
-    {
-      "resources": ["dashboard.html"],
-      "matches": ["<all_urls>"]
     }
   ]
 }

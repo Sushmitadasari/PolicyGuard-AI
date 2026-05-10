@@ -171,19 +171,28 @@ if (matchedLinks.length > 0) {
       "policyguard-button"
     );
 
-    if (button) {
+   if (button) {
 
-      button.addEventListener("click", () => {
+  button.addEventListener("click", () => {
 
-        // OPEN YOUR DASHBOARD
-       window.open(
-  chrome.runtime.getURL("dashboard.html"),
-  "_blank"
-);
+    try {
 
+      chrome.runtime.sendMessage({
+        type: "OPEN_EXTENSION"
       });
 
+    } catch (error) {
+
+      console.error(
+        "POLICYGUARD AI Error:",
+        error
+      );
+
     }
+
+  });
+
+}
 
   }
 }
