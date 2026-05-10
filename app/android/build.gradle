@@ -21,6 +21,11 @@ buildscript {
 apply plugin: "com.facebook.react.rootproject"
 
 subprojects {
+    project.plugins.withId("com.android.library") {
+        project.android {
+            ndkVersion = "27.1.12297006"
+        }
+    }
     if (name == "react-native-device-info") {
         tasks.configureEach { task ->
             if (task.name == "extractDebugAnnotations") {
