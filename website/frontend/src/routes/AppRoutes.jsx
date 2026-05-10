@@ -11,7 +11,6 @@ import Dashboard from "../pages/Dashboard";
 import PDFAnalyzer from "../pages/PDFAnalyzer";
 import WebsiteAnalyzer from "../pages/WebsiteAnalyzer";
 import History from "../pages/History";
-import Report from "../pages/Report";
 import Settings from "../pages/Settings";
 
 import ProtectedRoute from "./ProtectedRoute";
@@ -73,15 +72,7 @@ function AppRoutes() {
         }
       />
 
-      <Route
-        path="/report"
-        element={
-          <ProtectedRoute>
-            <Report />
-          </ProtectedRoute>
-        }
-      />
-
+      
       <Route
         path="/settings"
         element={

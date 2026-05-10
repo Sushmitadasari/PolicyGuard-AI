@@ -13,34 +13,46 @@ const Popup = () => {
     <div className="min-h-screen bg-gradient-to-br from-[#050816] to-[#111827] text-white p-5 w-[380px]">
       <Header />
 
-      <WebsiteCard website={mockAnalysis.website} />
+     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
+  <div className="lg:col-span-2">
+    <SummaryCard summary={mockAnalysis.summary} />
+
+    <div className="mt-6">
+      <h2 className="font-semibold mb-4 text-xl">
+        Detected Risks
+      </h2>
+
+      {mockAnalysis.risks.map((risk, index) => (
+        <ClauseCard
+          key={index}
+          risk={risk}
+        />
+      ))}
+    </div>
+  </div>
+
+  <div>
+    <WebsiteCard website={mockAnalysis.website} />
+
+    <div className="mt-6">
       <RiskMeter
         score={mockAnalysis.riskScore}
         level={mockAnalysis.riskLevel}
       />
+    </div>
 
-      <SummaryCard summary={mockAnalysis.summary} />
-
-      <div className="mb-5">
-        <h2 className="font-semibold mb-4">
-          Detected Risks
-        </h2>
-
-        {mockAnalysis.risks.map((risk, index) => (
-          <ClauseCard
-            key={index}
-            risk={risk}
-          />
-        ))}
-      </div>
-
+    <div className="mt-6">
       <RecommendationCard
         recommendations={mockAnalysis.recommendations}
       />
-
-      <FooterButtons />
     </div>
+
+    <FooterButtons />
+  </div>
+
+</div>
+</div>
   )
 }
 

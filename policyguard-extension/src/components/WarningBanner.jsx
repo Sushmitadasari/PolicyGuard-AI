@@ -1,3 +1,4 @@
+import React from "react";
 const WarningBanner = () => {
   return (
     <div className="fixed top-4 right-4 bg-red-500 text-white px-5 py-3 rounded-2xl shadow-2xl z-50">
