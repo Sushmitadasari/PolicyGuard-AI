@@ -2,7 +2,8 @@ const { askAI } = require('./aiService');
 const { determineIntent } = require('../chatbot/intentDetector');
 const { buildContext } = require('../chatbot/contextBuilder');
 const { buildChatbotPrompt } = require('../chatbot/chatbotPrompts');
-const { appendTurn, getSession, getRecentTurns } = require('../chatbot/conversationMemory');
+const { appendTurn, getSession, getRecentTurns, hydrateSession } = require('../chatbot/conversationMemory');
+const { cacheManager } = require('./cacheManager');
 
 const cleanReply = (reply) => {
   if (typeof reply !== 'string') {
@@ -14,6 +15,7 @@ const cleanReply = (reply) => {
 
 const chat = async ({ message, sessionId = 'default', analysisId = '', documentName = '' }) => {
   // load session memory and pass into intent detector
+  await hydrateSession(sessionId);
   const session = getSession(sessionId);
   const memory = {
     lastMode: session.lastMode,
@@ -72,7 +74,27 @@ const chat = async ({ message, sessionId = 'default', analysisId = '', documentN
 
   let reply = '';
   try {
-    reply = cleanReply(await askAI(prompt));
+    const cacheKeyHash = cacheManager.hashValue([
+      sessionId,
+      message,
+      intent.mode,
+      context.analysisContext?.analysisId || '',
+      context.analysisSummary || '',
+    ].join('|'));
+
+    const cachedReply = await cacheManager.get(['chatbot', 'reply', cacheKeyHash]);
+    if (cachedReply && typeof cachedReply.reply === 'string') {
+      reply = cleanReply(cachedReply.reply);
+    } else {
+      reply = cleanReply(await askAI(prompt));
+      if (reply) {
+        await cacheManager.set(
+          ['chatbot', 'reply', cacheKeyHash],
+          { reply },
+          120
+        );
+      }
+    }
   } catch (error) {
     reply = 'I could not generate a response right now. Please try again.';
   }
@@ -95,10 +117,12 @@ const chat = async ({ message, sessionId = 'default', analysisId = '', documentN
     mode: intent.mode,
     context,
     document: context.record || null,
-    analysis: context.record || null,
+    analysis: context.analysisContext || context.record || null,
+    analysisContext: context.analysisContext || null,
   });
 
   return {
+    analysisContext: context.analysisContext || null,
     reply,
     mode: intent.mode,
     sessionId,

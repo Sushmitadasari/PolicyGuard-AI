@@ -3,6 +3,7 @@ const AnalysisRecord = require('../models/analysisModel');
 const { isDatabaseConnected } = require('../config/db');
 const { normalizeClauses } = require('../utils/responseHelper');
 const { clearHistoryCache } = require('./cachingService');
+const { cacheManager } = require('./cacheManager');
 
 const normalizeAnalysisForStorage = (analysis) => ({
   summary: typeof analysis?.summary === 'string' ? analysis.summary.trim() : '',
@@ -76,6 +77,8 @@ const saveAnalysis = async (data = {}) => {
     }
 
     clearHistoryCache(created.userId);
+    await cacheManager.delByPrefix(['history', 'list', created.userId || '']);
+    await cacheManager.delByPrefix(['dashboard', 'stats', created.userId || '']);
 
     return created;
   } catch (error) {
@@ -84,7 +87,7 @@ const saveAnalysis = async (data = {}) => {
   }
 };
 
-const getHistory = async ({ userId, limit = 20, source, riskLevel, sort = 'newest' } = {}) => {
+const getHistory = async ({ userId, page = 1, limit = 20, source, riskLevel, sort = 'newest' } = {}) => {
   if (!isDatabaseConnected()) {
     return [];
   }
@@ -108,10 +111,38 @@ const getHistory = async ({ userId, limit = 20, source, riskLevel, sort = 'newes
     ? { riskScore: -1, createdAt: -1 }
     : { createdAt: -1 };
 
+  const safeLimit = toSafeLimit(limit);
+  const safePage = Math.max(Number.parseInt(page, 10) || 1, 1);
+  const skip = (safePage - 1) * safeLimit;
+
   return AnalysisRecord.find(query)
+    .select('source summary confidence risks riskScore riskLevel simplified clauses documentName fileName analysisType metadata createdAt updatedAt userId')
     .sort(sortQuery)
-    .limit(toSafeLimit(limit))
+    .skip(skip)
+    .limit(safeLimit)
     .lean();
+};
+
+const countHistory = async ({ userId, source, riskLevel } = {}) => {
+  if (!isDatabaseConnected()) {
+    return 0;
+  }
+
+  const query = {};
+
+  if (typeof userId === 'string' && userId.trim()) {
+    query.userId = userId.trim();
+  }
+
+  if (typeof source === 'string' && source.trim()) {
+    query.source = source.trim();
+  }
+
+  if (typeof riskLevel === 'string' && riskLevel.trim()) {
+    query.riskLevel = riskLevel.trim();
+  }
+
+  return AnalysisRecord.countDocuments(query);
 };
 
 const getAnalysisById = async (id, userId) => {
@@ -145,6 +176,8 @@ const deleteAnalysis = async (id, userId) => {
 
   if (deleted) {
     clearHistoryCache(deleted.userId || userId);
+    await cacheManager.delByPrefix(['history', 'list', deleted.userId || userId || '']);
+    await cacheManager.delByPrefix(['dashboard', 'stats', deleted.userId || userId || '']);
   }
 
   return deleted;
@@ -158,6 +191,7 @@ const getAnalysisHistoryById = getAnalysisById;
 module.exports = {
   saveAnalysis,
   getHistory,
+  countHistory,
   getAnalysisById,
   deleteAnalysis,
   saveAnalysisHistory,

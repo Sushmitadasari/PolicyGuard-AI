@@ -12,7 +12,6 @@ function Sidebar() {
     { name: "PDF Analyzer", path: "/pdf-analyzer", emoji: "📄" },
     { name: "Web Analyzer", path: "/website-analyzer", emoji: "🌐" },
     { name: "History", path: "/history", emoji: "🕘" },
-    { name: "Settings", path: "/settings", emoji: "⚙️" },
   ];
 
   return (

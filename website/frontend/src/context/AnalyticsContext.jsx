@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 
 import api from "../services/api";
 import { useAuth } from "./AuthContext";
+import { notifyAnalyticsChanged, subscribeToAnalyticsRefresh } from "../utils/analyticsEvents";
 
 const AnalyticsContext = createContext(null);
 
@@ -136,6 +137,14 @@ export const AnalyticsProvider = ({ children }) => {
     }));
   }, []);
 
+  useEffect(() => subscribeToAnalyticsRefresh(() => {
+    refreshAnalytics();
+  }), [refreshAnalytics]);
+
+  const notifyAnalyticsRefresh = useCallback(() => {
+    notifyAnalyticsChanged();
+  }, []);
+
   const value = useMemo(() => ({
     dashboardStats,
     recentAnalyses,
@@ -143,10 +152,11 @@ export const AnalyticsProvider = ({ children }) => {
     latestAnalyses,
     setLatestAnalysis,
     refreshAnalytics,
+    notifyAnalyticsRefresh,
     loading,
     refreshing,
     error,
-  }), [dashboardStats, error, historyItems, latestAnalyses, loading, recentAnalyses, refreshAnalytics, refreshing, setLatestAnalysis]);
+  }), [dashboardStats, error, historyItems, latestAnalyses, loading, recentAnalyses, notifyAnalyticsRefresh, refreshAnalytics, refreshing, setLatestAnalysis]);
 
   return (
     <AnalyticsContext.Provider value={value}>

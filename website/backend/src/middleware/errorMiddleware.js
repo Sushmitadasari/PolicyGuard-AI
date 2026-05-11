@@ -1,14 +1,25 @@
+const { logger } = require('../config/logger');
+
 const errorMiddleware = (err, req, res, next) => {
   const statusCode = err.statusCode || err.status || 500;
   const isDevelopment = process.env.NODE_ENV !== 'production';
 
-  console.error(
-    `[ERROR] ${err.name || 'Error'}: ${err.message}\n${isDevelopment ? err.stack : ''}`
-  );
+  logger.error({
+    event: 'request-error',
+    requestId: req.id,
+    method: req.method,
+    path: req.originalUrl,
+    statusCode,
+    errorName: err.name || 'Error',
+    errorMessage: err.message,
+    stack: isDevelopment ? err.stack : undefined,
+  });
 
   const response = {
+    success: false,
     error: err.message || 'Internal server error',
     statusCode,
+    requestId: req.id,
   };
 
   if (isDevelopment) {

@@ -26,9 +26,11 @@ const chatWithAssistant = async (req, res, next) => {
         analysisSummary: result.context.analysisSummary,
         clauses: result.context.clauses,
         source: result.context.source,
+        analysisContext: result.analysisContext || null,
       },
       metadata: {
         processedAt: new Date().toISOString(),
+        hasAnalysisContext: Boolean(result.analysisContext),
       },
     });
   } catch (error) {

@@ -9,8 +9,8 @@ const analysisSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      enum: ['chat', 'analyze', 'pdf', 'website'],
-      default: 'analyze',
+      enum: ['chat', 'analyze', 'pdf', 'website', 'web', 'extension', 'api'],
+      default: 'api',
       index: true,
     },
     policyText: {
@@ -86,6 +86,9 @@ const analysisSchema = new mongoose.Schema(
 
 analysisSchema.index({ createdAt: -1 });
 analysisSchema.index({ riskScore: -1 });
+analysisSchema.index({ userId: 1, createdAt: -1 });
+analysisSchema.index({ userId: 1, riskScore: -1, createdAt: -1 });
+analysisSchema.index({ userId: 1, source: 1, createdAt: -1 });
 analysisSchema.index({ policyText: 'text', summary: 'text', risks: 'text' });
 
 module.exports = mongoose.model('AnalysisRecord', analysisSchema);

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import {
   ResponsiveContainer,
@@ -53,24 +53,17 @@ const POLICY_DATA = [
 ];
 
 function WebsiteAnalyzer() {
-  const [url, setUrl] =
-    useState("");
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [showResults,
-    setShowResults] =
-    useState(false);
-
-  const [error, setError] =
-    useState("");
-
+  const [url, setUrl] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
   const analytics = useAnalytics();
+  const autoRunUrlRef = useRef("");
 
-  const startAnalysis = async () => {
-    if (!url.trim()) {
+  const startAnalysis = async (targetUrl = url, options = {}) => {
+    const normalizedUrl = typeof targetUrl === "string" ? targetUrl.trim() : "";
+    if (!normalizedUrl) {
       setError("Please enter website URL.");
       return;
     }
@@ -80,27 +73,83 @@ function WebsiteAnalyzer() {
     setShowResults(false);
 
     try {
-      const payload = { url: url.trim() };
-      const res = await api.post("/website/analyze", payload);
+      const payload = {
+        source: options.source || "web",
+        type: "website",
+        mode: "full",
+        payload: { url: normalizedUrl },
+        options: {
+          persist: true,
+          consent: true,
+        },
+        metadata: {
+          currentUrl: normalizedUrl,
+          trigger: options.trigger || "manual",
+        },
+      };
 
-      analytics?.setLatestAnalysis?.("website", res.data);
-      await analytics?.refreshAnalytics?.();
+      const res = await api.post("/api/v1/analyze", payload);
+      const analysisData = res.data?.data ?? res.data;
+
+      analytics?.setLatestAnalysis?.("website", analysisData);
+      analytics?.notifyAnalyticsRefresh?.();
 
       // on success navigate to result page and pass data
-      navigate("/website-result", { state: res.data });
+      navigate("/website-result", { state: analysisData });
     } catch (err) {
       console.error("Website analyze error:", err);
       setError(
-        err?.response?.data?.message || "Failed to analyze website. Try again."
+        err?.response?.data?.error?.message || err?.response?.data?.message || "Failed to analyze website. Try again."
       );
     } finally {
       setLoading(false);
     }
   };
 
-  const quickAction = (
-    action
-  ) => {
+  // Handle auto-run from URL query parameters
+  // Uses window.location.search for reliable extraction and proper URL decoding
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const rawUrl = params.get("url");
+    
+    if (!rawUrl) {
+      return;
+    }
+    
+    // Decode URL-encoded parameters
+    let decodedUrl = "";
+    try {
+      decodedUrl = decodeURIComponent(rawUrl.trim());
+    } catch (e) {
+      console.error("Failed to decode URL parameter:", e);
+      return;
+    }
+    
+    if (!decodedUrl) {
+      return;
+    }
+    
+    const source = params.get("source")?.trim() || "web";
+    
+    // Update input field state to show URL
+    setUrl(decodedUrl);
+    
+    // Prevent duplicate auto-runs
+    if (autoRunUrlRef.current === decodedUrl) {
+      return;
+    }
+    
+    // Mark URL as processed
+    autoRunUrlRef.current = decodedUrl;
+    
+    // Trigger analysis immediately with the decoded URL
+    startAnalysis(decodedUrl, {
+      source,
+      trigger: "auto-url",
+    });
+  }, []);
+
+  const quickAction = (action) => {
     alert(`${action} initiated.`);
   };
 
@@ -182,7 +231,7 @@ function WebsiteAnalyzer() {
             whileTap={{
               scale: 0.98,
             }}
-            onClick={startAnalysis}
+            onClick={() => startAnalysis(url)}
             className="xl:w-[260px] h-20 rounded-[2rem] bg-gradient-to-r from-blue-600 to-cyan-500 font-black text-lg shadow-2xl shadow-blue-600/20"
           >
             Analyze Website

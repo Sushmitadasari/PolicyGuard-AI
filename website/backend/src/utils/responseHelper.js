@@ -167,14 +167,43 @@ const buildDashboardStats = (records = []) => {
     return accumulator;
   }, {});
 
+  const sourceBreakdown = items.reduce((accumulator, item) => {
+    const source = item.source || 'Unknown';
+    accumulator[source] = (accumulator[source] || 0) + 1;
+    return accumulator;
+  }, {});
+
   return {
     totalAnalyses,
     averageRiskScore,
     averageConfidence,
     riskLevelBreakdown,
+    sourceBreakdown,
     recentItems: items.slice(0, 5),
   };
 };
+
+const buildApiSuccessResponse = (data = {}, meta = {}) => ({
+  success: true,
+  data,
+  meta: {
+    timestamp: new Date().toISOString(),
+    ...(meta && typeof meta === 'object' && !Array.isArray(meta) ? meta : {}),
+  },
+});
+
+const buildApiErrorResponse = (code, message, details = {}, meta = {}) => ({
+  success: false,
+  error: {
+    code: typeof code === 'string' && code.trim() ? code.trim() : 'INTERNAL_ERROR',
+    message: typeof message === 'string' && message.trim() ? message.trim() : 'Something went wrong',
+    details: details && typeof details === 'object' && !Array.isArray(details) ? details : {},
+  },
+  meta: {
+    timestamp: new Date().toISOString(),
+    ...(meta && typeof meta === 'object' && !Array.isArray(meta) ? meta : {}),
+  },
+});
 
 module.exports = {
   buildFrontendAnalysisResponse,
@@ -182,4 +211,6 @@ module.exports = {
   buildDashboardStats,
   calculateConfidenceScore,
   normalizeClauses,
+  buildApiSuccessResponse,
+  buildApiErrorResponse,
 };

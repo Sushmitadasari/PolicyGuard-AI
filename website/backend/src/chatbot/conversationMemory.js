@@ -1,23 +1,70 @@
 const MAX_TURNS = 12;
+const { cacheManager } = require('../services/cacheManager');
 
 const sessions = new Map();
+
+const buildEmptySession = (key) => ({
+  sessionId: key,
+  turns: [],
+  lastMode: '',
+  lastContext: null,
+  lastAnalysis: null,
+  lastDocument: null,
+  lastAnalysisContext: null,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+});
 
 const getSession = (sessionId = 'default') => {
   const key = String(sessionId || 'default');
 
   if (!sessions.has(key)) {
-    sessions.set(key, {
-      sessionId: key,
-      turns: [],
-      lastMode: '',
-      lastContext: null,
-      lastAnalysis: null,
-      lastDocument: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
+    sessions.set(key, buildEmptySession(key));
   }
 
+  return sessions.get(key);
+};
+
+const persistSession = async (sessionId) => {
+  const key = String(sessionId || 'default');
+  const session = sessions.get(key);
+  if (!session) {
+    return;
+  }
+
+  try {
+    await cacheManager.set(
+      ['chatbot', 'session', key],
+      session,
+      cacheManager.cacheTTL.chatbotSession()
+    );
+  } catch (_error) {
+    // Fallback to in-memory only when cache persistence fails.
+  }
+};
+
+const hydrateSession = async (sessionId = 'default') => {
+  const key = String(sessionId || 'default');
+  if (sessions.has(key)) {
+    return sessions.get(key);
+  }
+
+  let cached = null;
+  try {
+    cached = await cacheManager.get(['chatbot', 'session', key]);
+  } catch (_error) {
+    cached = null;
+  }
+  if (cached && typeof cached === 'object') {
+    sessions.set(key, {
+      ...buildEmptySession(key),
+      ...cached,
+      sessionId: key,
+    });
+    return sessions.get(key);
+  }
+
+  sessions.set(key, buildEmptySession(key));
   return sessions.get(key);
 };
 
@@ -46,7 +93,13 @@ const appendTurn = (sessionId, turn) => {
 
   if (turn?.document) {
     session.lastDocument = turn.document;
+
+    if (turn?.analysisContext) {
+      session.lastAnalysisContext = turn.analysisContext;
+    }
   }
+
+  void persistSession(sessionId);
 
   return session;
 };
@@ -56,6 +109,7 @@ const setSessionContext = (sessionId, context = {}) => {
   session.lastContext = context;
   session.lastMode = typeof context.mode === 'string' ? context.mode : session.lastMode;
   session.updatedAt = new Date().toISOString();
+  void persistSession(sessionId);
   return session;
 };
 
@@ -68,6 +122,7 @@ const getLastContext = (sessionId) => getSession(sessionId).lastContext;
 
 module.exports = {
   getSession,
+  hydrateSession,
   appendTurn,
   setSessionContext,
   getRecentTurns,

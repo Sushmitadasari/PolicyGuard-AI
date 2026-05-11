@@ -223,12 +223,31 @@ const analyzeWebsiteText = async (text) => {
 
 const analyzeWebsite = async (url) => {
   const startTime = Date.now();
-  const { html, finalUrl, statusCode } = await fetchWebsiteHtml(url);
+
+  let html, finalUrl, statusCode;
+
+  try {
+    const fetchResult = await fetchWebsiteHtml(url);
+    html = fetchResult.html;
+    finalUrl = fetchResult.finalUrl;
+    statusCode = fetchResult.statusCode;
+  } catch (fetchError) {
+    console.error('Website fetch failed:', {
+      url,
+      error: fetchError.message,
+    });
+    throw new Error(
+      fetchError.message || 'Failed to fetch website content. Please verify the URL and try again.'
+    );
+  }
+
   const extracted = extractReadableText(html, finalUrl);
   const text = extracted.text;
 
-  if (!text) {
-    throw new Error('Could not extract readable content from website');
+  if (!text || text.trim().length < 100) {
+    throw new Error(
+      'Website content is empty or too short to analyze. The page may be JavaScript-heavy or blocked.'
+    );
   }
 
   const chunkCount = requiresChunking(text) ? chunkText(text).length : 1;

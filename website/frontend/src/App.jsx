@@ -3,6 +3,7 @@ import {
 } from "react-router-dom";
 
 import AppRoutes from "./routes/AppRoutes";
+import FloatingChatWidget from "./components/common/FloatingChatWidget";
 
 import {
   AuthProvider,
@@ -19,6 +20,7 @@ function App() {
         <AnalyticsProvider>
 
           <AppRoutes />
+          <FloatingChatWidget />
 
         </AnalyticsProvider>
 

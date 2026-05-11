@@ -138,7 +138,7 @@ PolicyGuard-AI is an intelligent privacy policy analysis tool powered by AI. It 
    AI_PROVIDER=gemini  # or groq, openai, anthropic
 
    # Server Config
-   PORT=5000
+   PORT=3000
    NODE_ENV=development
    ```
 
@@ -146,7 +146,7 @@ PolicyGuard-AI is an intelligent privacy policy analysis tool powered by AI. It 
    ```bash
    npm start
    ```
-   Backend runs on `http://localhost:5000`
+   Backend runs on `http://localhost:3000`
 
 ### Frontend Setup
 
@@ -165,7 +165,7 @@ PolicyGuard-AI is an intelligent privacy policy analysis tool powered by AI. It 
 3. **Create `.env` file** (in `frontend/` directory):
 
    ```env
-   VITE_API_URL=http://localhost:5000
+   VITE_API_URL=http://localhost:3000
    ```
 
 4. **Start the development server:**
@@ -456,12 +456,12 @@ PolicyGuard-AI/
 - `MONGODB_URI`: MongoDB connection string
 - `JWT_SECRET`: Secret key for JWT signing
 - `AI_PROVIDER`: Default AI provider (gemini, groq, openai, anthropic)
-- `PORT`: Server port (default: 5000)
+- `PORT`: Server port (default: 3000)
 - `NODE_ENV`: Environment (development, production)
 
 **Frontend (`frontend/.env`):**
 
-- `VITE_API_URL`: Backend API base URL (default: http://localhost:5000)
+- `VITE_API_URL`: Backend API base URL (default: http://localhost:3000)
 
 ## 📝 API Response Examples
 

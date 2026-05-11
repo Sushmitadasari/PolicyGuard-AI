@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import PageHeader from "../components/common/PageHeader";
 import api from "../services/api";
+import { generateSuggestedQuestions, getRiskEmoji } from "../utils/suggestedQuestionsHelper";
 
 function WebsiteChatPage() {
   const location = useLocation();
@@ -24,13 +25,13 @@ function WebsiteChatPage() {
   const [sessionId] = useState(`website-session-${Date.now()}`);
   const messagesEndRef = useRef(null);
 
-  const suggestedQuestions = [
-    "Summarize major risks",
-    "Does this site share user data?",
-    "Explain tracking concerns",
-    "What GDPR issues exist?",
-    "Is this policy safe?",
-  ];
+  const suggestedQuestions = generateSuggestedQuestions(websiteAnalysis);
+
+  // Dynamic greeting based on analysis
+  const riskEmoji = websiteAnalysis ? getRiskEmoji(websiteAnalysis.riskScore) : "🌐";
+  const greeting = websiteAnalysis
+    ? `${riskEmoji} Privacy Assistant - Risk Score: ${websiteAnalysis.riskScore}/10`
+    : "🌐 Privacy Assistant";
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -65,6 +66,16 @@ function WebsiteChatPage() {
           clauses: websiteAnalysis?.clauses?.slice(0, 5),
           confidence: websiteAnalysis?.confidence,
         };
+        // Add metadata and other fields
+        payload.context.metadata = websiteAnalysis?.metadata;
+        payload.context.source = websiteAnalysis?.source;
+        // Pass analysisId if available for better DB lookup
+        if (websiteAnalysis?._id) {
+          payload.analysisId = websiteAnalysis._id;
+        }
+        if (websiteAnalysis?.id) {
+          payload.analysisId = websiteAnalysis.id;
+        }
       }
 
       const response = await api.post("/chatbot/chat", payload);

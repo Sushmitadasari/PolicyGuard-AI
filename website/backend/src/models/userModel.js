@@ -18,6 +18,26 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    phone: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    organization: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    role: {
+      type: String,
+      enum: ['user', 'admin', 'analyst', 'enterprise'],
+      default: 'user',
+    },
+    accountStatus: {
+      type: String,
+      enum: ['active', 'protected', 'suspended'],
+      default: 'active',
+    },
   },
   {
     timestamps: true,

@@ -1,6 +1,7 @@
 const { getAnalysisHistory, getAnalysisHistoryById } = require('../services/historyService');
 const { normalizeHistoryRecord } = require('../utils/responseHelper');
 const { getSession, getLastContext, getRecentTurns, setSessionContext } = require('./conversationMemory');
+const { normalizeAnalysisContext, buildContextForPrompt } = require('../utils/chatContextBuilder');
 
 const MAX_HISTORY_LOOKUP = 25;
 
@@ -76,6 +77,7 @@ const buildContextFromRecord = (record, message) => {
       relevantFacts: 'None.',
       clauses: [],
       record: null,
+      analysisContext: null,
     };
   }
 
@@ -93,6 +95,10 @@ const buildContextFromRecord = (record, message) => {
     record.risks?.length ? `Risks: ${record.risks.join('; ')}` : '',
   ].filter(Boolean).join(' | ');
 
+  // Build standardized analysis context
+  const analysisContext = normalizeAnalysisContext(record);
+  const contextForPrompt = buildContextForPrompt(analysisContext);
+
   return {
     documentSummary: documentSummary || 'No document summary available.',
     analysisSummary: analysisSummary || 'No analysis summary available.',
@@ -100,6 +106,8 @@ const buildContextFromRecord = (record, message) => {
     relevantFacts: record.policyText ? cleanText(record.policyText, 700) : 'None.',
     clauses: relevantClauses,
     record,
+    analysisContext,
+    contextForPrompt,
   };
 };
 

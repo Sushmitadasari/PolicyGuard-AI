@@ -29,6 +29,7 @@ import AIStatusBadge from "../components/common/AIStatusBadge";
 
 import { uploadPDF } from "../services/pdfService";
 import { useAnalytics } from "../context/AnalyticsContext";
+import { notifyAnalyticsChanged } from "../utils/analyticsEvents";
 
 const PIE_DATA = [
   { name: "Safe", value: 45 },
@@ -126,8 +127,7 @@ function PDFAnalyzer() {
       const analysisData = response.data;
 
       analytics?.setLatestAnalysis?.("pdf", analysisData);
-
-      await analytics?.refreshAnalytics?.();
+      notifyAnalyticsChanged();
 
       // Navigate to result page with data
       setTimeout(() => {

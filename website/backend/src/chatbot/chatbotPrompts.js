@@ -29,6 +29,43 @@ const buildChatbotPrompt = ({ message, intent, context, memory }) => {
     '',
     ...contextLines,
   ].join('\n');
+
+  // Enhanced analysis context from standardized format
+  const analysisContextLines = [];
+  if (context?.contextForPrompt) {
+    const promptCtx = context.contextForPrompt;
+    analysisContextLines.push(
+      `Document/Source: ${promptCtx.documentInfo}`,
+      `Risk Assessment: ${promptCtx.analysisInfo}`,
+      `Detected Risks: ${promptCtx.riskInfo}`,
+      `Key Clauses: ${promptCtx.clauseInfo}`
+    );
+  }
+
+  if (context?.analysisContext) {
+    const ac = context.analysisContext;
+    if (ac.recommendations && ac.recommendations.length > 0) {
+      analysisContextLines.push(`Recommendations: ${ac.recommendations.slice(0, 3).join('; ')}`);
+    }
+  }
+
+  const finalContextLines = [...contextLines];
+  if (analysisContextLines.length > 0) {
+    finalContextLines.push('', '=== DETAILED ANALYSIS CONTEXT ===', ...analysisContextLines);
+  }
+
+  return [
+    PLATFORM_HELP,
+    'Answer the user using only the most relevant context available.',
+    'If the user refers to "it" or "this clause", resolve it using the provided context and memory.',
+    'If document context is available, ground your answer in that document and mention the risky clause or analysis finding.',
+    'If only result context is available, explain the analysis result in plain language.',
+    'If no document or result context exists, answer as a platform/legal concepts assistant.',
+    'Avoid mentioning internal implementation details.',
+    'Provide practical, actionable guidance based on the detected risks and clauses.',
+    '',
+    ...finalContextLines,
+  ].join('\n');
 };
 
 module.exports = {

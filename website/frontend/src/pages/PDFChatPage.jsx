@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import PageHeader from "../components/common/PageHeader";
 import api from "../services/api";
+import { generateSuggestedQuestions, getRiskEmoji } from "../utils/suggestedQuestionsHelper";
 
 function PDFChatPage() {
   const location = useLocation();
@@ -24,13 +25,13 @@ function PDFChatPage() {
   const [sessionId] = useState(`session-${Date.now()}`);
   const messagesEndRef = useRef(null);
 
-  const suggestedQuestions = [
-    "Why is this clause risky?",
-    "Explain the privacy risks in this document",
-    "What should I watch out for?",
-    "Is this legal agreement fair?",
-    "Summarize the key concerns",
-  ];
+  const suggestedQuestions = generateSuggestedQuestions(pdfAnalysis);
+
+  // Dynamic greeting based on analysis
+  const riskEmoji = pdfAnalysis ? getRiskEmoji(pdfAnalysis.riskScore) : "📄";
+  const greeting = pdfAnalysis
+    ? `${riskEmoji} AI Legal Assistant - Risk Score: ${pdfAnalysis.riskScore}/10`
+    : "📄 AI Legal Assistant";
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -58,13 +59,23 @@ function PDFChatPage() {
       };
 
       if (pdfAnalysis) {
-        payload.context = {
-          summary: pdfAnalysis?.summary,
-          riskScore: pdfAnalysis?.riskScore,
-          riskLevel: pdfAnalysis?.riskLevel,
-          risks: pdfAnalysis?.risks?.slice(0, 5),
-          clauses: pdfAnalysis?.clauses?.slice(0, 5),
-        };
+          payload.context = {
+            summary: pdfAnalysis?.summary,
+            riskScore: pdfAnalysis?.riskScore,
+            riskLevel: pdfAnalysis?.riskLevel,
+            risks: pdfAnalysis?.risks?.slice(0, 5),
+            clauses: pdfAnalysis?.clauses?.slice(0, 5),
+            confidence: pdfAnalysis?.confidence,
+            metadata: pdfAnalysis?.metadata,
+            fileName: pdfAnalysis?.fileName || pdfAnalysis?.documentName,
+          };
+          // Pass analysisId if available for better DB lookup
+          if (pdfAnalysis?._id) {
+            payload.analysisId = pdfAnalysis._id;
+          }
+          if (pdfAnalysis?.id) {
+            payload.analysisId = pdfAnalysis.id;
+          }
       }
 
       const response = await api.post("/chatbot/chat", payload);

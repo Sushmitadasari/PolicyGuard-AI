@@ -6,6 +6,7 @@ import EmptyState from "../components/common/EmptyState";
 import Modal from "../components/common/Modal";
 import historyService from "../services/historyService";
 import { useAnalytics } from "../context/AnalyticsContext";
+import { notifyAnalyticsChanged } from "../utils/analyticsEvents";
 
 const HISTORY_DATA = [];
 
@@ -127,7 +128,7 @@ function History() {
       setHistories((prev) => prev.filter((it) => it.id !== id));
       setConfirmOpen(false);
       setConfirmTarget(null);
-      await analytics?.refreshAnalytics?.();
+      notifyAnalyticsChanged();
     } catch (err) {
       console.error("Failed to delete history item", err);
       alert("Delete failed");

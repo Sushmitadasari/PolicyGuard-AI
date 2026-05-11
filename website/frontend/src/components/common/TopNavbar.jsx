@@ -1,28 +1,26 @@
-import React from "react";
+import React, { useEffect } from "react";
 import AIStatusBadge from "./AIStatusBadge";
-import SearchBar from "./SearchBar";
+import ProfileDropdown from "./ProfileDropdown";
+import { useAuth } from "../../context/AuthContext";
 
 function TopNavbar() {
+  const { user, logout } = useAuth();
+
+  useEffect(() => {
+    // expose the topbar height to CSS so modals can position below it responsively
+    try {
+      document.documentElement.style.setProperty("--topbar-height", "6rem");
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
   return (
     <div className="sticky top-0 z-40 h-24 bg-black/30 border-b border-white/10 backdrop-blur-3xl px-8 flex items-center justify-between">
-      <SearchBar />
-
-      <div className="flex items-center gap-6">
+      <div className="ml-auto flex items-center gap-6">
         <AIStatusBadge status="Active" />
 
-        <div className="text-right">
-          <p className="text-white font-semibold">
-            Sushmita
-          </p>
-
-          <p className="text-white/40 text-sm">
-            Enterprise User
-          </p>
-        </div>
-
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center font-black text-xl">
-          S
-        </div>
+        <ProfileDropdown user={user} onLogout={logout} />
       </div>
     </div>
   );
