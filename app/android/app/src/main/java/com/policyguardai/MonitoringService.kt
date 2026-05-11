@@ -97,7 +97,7 @@ class MonitoringService : Service() {
         val pendingIntent = PendingIntent.getActivity(this, 0, launchIntent, pendingIntentFlags)
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_secure) // Or use your own icon
+            .setSmallIcon(R.drawable.ic_notification) // Or use your own icon
             .setContentTitle("PolicyGuard AI")
             .setContentText("Actively monitoring app installations")
             .setPriority(NotificationCompat.PRIORITY_LOW)

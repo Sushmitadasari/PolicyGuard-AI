@@ -1,0 +1,114 @@
+{
+  "name": "PolicyGuardAI",
+  "version": "1.0.0",
+  "description": "Professional Desktop Application for Privacy Protection and App Analysis",
+  "private": true,
+  "main": "public/electron.js",
+  "homepage": "./",
+  "author": "PolicyGuard AI",
+  "license": "MIT",
+  "build": {
+    "appId": "com.policyguardai.desktop",
+    "productName": "PolicyGuard AI",
+    "directories": {
+      "buildResources": "public"
+    },
+    "files": [
+      "build/**/*",
+      "public/electron.js",
+      "public/preload.js",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "PolicyGuard AI"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}.exe"
+    }
+  },
+  "scripts": {
+    "react-start": "react-scripts start",
+    "react-build": "react-scripts build",
+    "react-test": "react-scripts test",
+    "react-eject": "react-scripts eject",
+    "electron-dev": "concurrently \"npm run react-start\" \"wait-on tcp:3000 && npm run start\"",
+    "electron-build": "npm run react-build && electron-builder",
+    "build": "npm run react-build && electron-builder -w",
+    "start": "electron .",
+    "dev": "npm run electron-dev",
+    "dist": "npm run react-build && electron-builder --publish=never",
+    "pack": "electron-builder --dir",
+    "prestart": "node -e \"process.exit(0)\"",
+    "lint": "eslint .",
+    "test": "jest"
+  },
+  "dependencies": {
+    "axios": "^1.16.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-refresh": "^0.18.0",
+    "react-scripts": "^5.0.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@babel/preset-env": "^7.25.3",
+    "@babel/preset-react": "^7.25.0",
+    "@babel/runtime": "^7.25.0",
+    "@testing-library/jest-dom": "^6.1.5",
+    "@testing-library/react": "^15.0.0",
+    "@testing-library/user-event": "^13.5.0",
+    "@types/jest": "^29.5.13",
+    "@types/react": "^18.2.0",
+    "concurrently": "^8.2.1",
+    "electron": "^30.0.0",
+    "electron-builder": "^24.6.4",
+    "eslint": "^8.19.0",
+    "jest": "^29.6.3",
+    "prettier": "2.8.8",
+    "typescript": "^5.8.3",
+    "wait-on": "^7.0.1"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "engines": {
+    "node": ">= 22.11.0",
+    "npm": ">= 10.0.0"
+  }
+}
