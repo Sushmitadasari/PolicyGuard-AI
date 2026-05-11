@@ -21,7 +21,7 @@ const historyRoutes = require('./routes/historyRoutes');
 const cacheRoutes = require('./routes/cacheRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const { isDatabaseConnected, getDatabaseConnectionError } = require('./config/db');
-
+const profileRoutes = require("./routes/profileRoutes");
 const app = express();
 
 app.disable('x-powered-by');
@@ -110,7 +110,7 @@ app.get('/health/cache', async (_req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
-
+app.use("/api/profile", profileRoutes);
 app.use('/auth', authLimiter, authRoutes);
 app.use('/', chatRoutes);
 app.use('/chatbot', chatbotLimiter, chatbotRoutes);

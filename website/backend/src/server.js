@@ -13,7 +13,7 @@ const {
 } = require('./services/analysisOrchestrator');
 
 const PORT = config.get('PORT', 3000);
-
+const profileRoutes = require("./routes/profileRoutes");
 (async () => {
   try {
     config.loadConfig();

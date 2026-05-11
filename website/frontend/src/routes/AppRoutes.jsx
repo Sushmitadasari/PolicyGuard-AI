@@ -15,7 +15,9 @@ import WebsiteResultPage from "../pages/WebsiteResultPage";
 import WebsiteChatPage from "../pages/WebsiteChatPage";
 import History from "../pages/History";
 import Settings from "../pages/Settings";
-
+import ProfileSettings from "../pages/settings/ProfileSettings";
+import PasswordSettings from "../pages/settings/PasswordSettings";
+import ManageAccount from "../pages/account/ManageAccount";
 import ProtectedRoute from "./ProtectedRoute";
 
 function AppRoutes() {
@@ -47,7 +49,20 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+    <Route
+  path="/settings/profile"
+  element={<ProfileSettings />}
+/>
 
+<Route
+  path="/settings/password"
+  element={<PasswordSettings />}
+/>
+
+<Route
+  path="/account/manage"
+  element={<ManageAccount />}
+/>
       <Route
         path="/pdf-analyzer"
         element={

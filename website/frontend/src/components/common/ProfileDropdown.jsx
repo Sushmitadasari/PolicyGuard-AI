@@ -2,22 +2,60 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
-const MENU_ITEMS = [
-  { label: "My Profile", path: "/profile", description: "Account and identity" },
-  { label: "Workspace", path: "/dashboard", description: "Dashboard overview" },
-  { label: "AI Preferences", path: "/settings", description: "Model and assistant settings" },
-  { label: "Privacy & Security", path: "/settings", description: "Security controls" },
-  { label: "Notifications", path: "/settings", description: "Alerts and updates" },
-  { label: "Scan History", path: "/history", description: "Recent analyses" },
-  { label: "Help Center", path: "/settings", description: "Support and guidance" },
-];
+const getMenuItems = (user) => {
+  const baseItems = [
+    {
+      label: "My Profile",
+      path: "/profile",
+      description: "Account and identity",
+    },
+
+    {
+      label: "Workspace",
+      path: "/dashboard",
+      description: "Dashboard overview",
+    },
+
+    {
+      label: "Scan History",
+      path: "/history",
+      description: "Recent analyses",
+    },
+  ];
+
+  // Admin menu
+  if (user?.role === "admin") {
+    baseItems.push({
+      label: "Admin Panel",
+      path: "/admin",
+      description: "Manage platform",
+    });
+  }
+
+  // Enterprise menu
+  if (user?.role === "enterprise") {
+    baseItems.push({
+      label: "Enterprise Settings",
+      path: "/enterprise",
+      description: "Enterprise controls",
+    });
+  }
+
+  return baseItems;
+};
 
 const getDisplayName = (user) => {
   if (!user || typeof user !== "object") {
     return "User";
   }
 
-  return user.name || user.fullName || user.username || user.email || "User";
+  return (
+  user?.name ||
+  user?.fullName ||
+  user?.username ||
+  user?.email?.split("@")[0] ||
+  "User"
+);
 };
 
 const getInitial = (user) => {
@@ -146,9 +184,18 @@ function ProfileDropdown({ user, onLogout }) {
             </div>
           </div>
 
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-blue-500 to-cyan-500 font-black text-xl text-white shadow-lg shadow-cyan-500/20">
-            {initial}
-          </div>
+          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-linear-to-br from-blue-500 to-cyan-500 font-black text-xl text-white shadow-lg shadow-cyan-500/20">
+
+  {user?.profilePic ? (
+    <img
+      src={user.profilePic}
+      alt="profile"
+      className="h-full w-full object-cover"
+    />
+  ) : (
+    initial
+  )}
+</div>
         </div>
       </button>
 
@@ -184,18 +231,31 @@ function ProfileDropdown({ user, onLogout }) {
                     </div>
 
                     {email && <p className="mt-3 truncate text-sm text-cyan-100/80">{email}</p>}
-
+<p className="mt-2 text-xs text-white/50">
+  Joined{" "}
+  {user?.createdAt
+    ? new Date(user.createdAt).toLocaleDateString()
+    : "Recently"}
+</p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/65">
-                        {isAiActive ? "AI Active" : "AI Offline"}
+                       {
+  user?.accountStatus === "active"
+    ? "AI Active"
+    : "AI Offline"
+}
                       </span>
 
                       <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/65">
-                        Protected
+                        {accountStatus}
                       </span>
 
                       <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/65">
-                        Enterprise Secured
+                        {
+  user?.role === "enterprise"
+    ? "Enterprise Secured"
+    : "Standard Security"
+}
                       </span>
                     </div>
                   </div>
@@ -203,7 +263,7 @@ function ProfileDropdown({ user, onLogout }) {
               </div>
 
               <div className="p-2">
-                {MENU_ITEMS.map((item) => (
+                {getMenuItems(user).map((item) => (
                   <button
                     key={item.label}
                     type="button"
