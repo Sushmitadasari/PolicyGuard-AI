@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const AnalysisRecord = require('../models/analysisModel');
 const { isDatabaseConnected } = require('../config/db');
 const { normalizeClauses } = require('../utils/responseHelper');
+const { clearHistoryCache } = require('./cachingService');
 
 const normalizeAnalysisForStorage = (analysis) => ({
   summary: typeof analysis?.summary === 'string' ? analysis.summary.trim() : '',
@@ -74,6 +75,8 @@ const saveAnalysis = async (data = {}) => {
       // ignore logging errors
     }
 
+    clearHistoryCache(created.userId);
+
     return created;
   } catch (error) {
     console.warn(`Skipping history save: ${error.message}`);
@@ -138,7 +141,13 @@ const deleteAnalysis = async (id, userId) => {
     query.userId = userId.trim();
   }
 
-  return AnalysisRecord.findOneAndDelete(query).lean();
+  const deleted = await AnalysisRecord.findOneAndDelete(query).lean();
+
+  if (deleted) {
+    clearHistoryCache(deleted.userId || userId);
+  }
+
+  return deleted;
 };
 
 // Backward-compatible aliases for existing callsites.

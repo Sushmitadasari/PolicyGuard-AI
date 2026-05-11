@@ -4,15 +4,18 @@ import { useLocation, useNavigate } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import PageHeader from "../components/common/PageHeader";
 import api from "../services/api";
+import { useAnalytics } from "../context/AnalyticsContext";
 
 export default function WebsiteResultPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const analytics = useAnalytics();
 
   const analysis =
     location.state?.analysis ??
     location.state?.data?.analysis ??
     location.state?.data ??
+    analytics?.latestAnalyses?.website ??
     location.state ??
     null;
 

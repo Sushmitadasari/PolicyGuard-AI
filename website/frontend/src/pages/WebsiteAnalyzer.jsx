@@ -19,7 +19,7 @@ import { motion } from "framer-motion";
 
 import DashboardLayout from "../layouts/DashboardLayout";
 import api from "../services/api";
-import { triggerDashboardRefresh } from "../utils/dashboardEvents";
+import { useAnalytics } from "../context/AnalyticsContext";
 import { useNavigate } from "react-router-dom";
 
 import PageHeader from "../components/common/PageHeader";
@@ -67,6 +67,7 @@ function WebsiteAnalyzer() {
     useState("");
 
   const navigate = useNavigate();
+  const analytics = useAnalytics();
 
   const startAnalysis = async () => {
     if (!url.trim()) {
@@ -82,8 +83,8 @@ function WebsiteAnalyzer() {
       const payload = { url: url.trim() };
       const res = await api.post("/website/analyze", payload);
 
-      // notify dashboard to refresh
-      try { triggerDashboardRefresh(); } catch (_) {}
+      analytics?.setLatestAnalysis?.("website", res.data);
+      await analytics?.refreshAnalytics?.();
 
       // on success navigate to result page and pass data
       navigate("/website-result", { state: res.data });

@@ -8,13 +8,19 @@ import {
   AuthProvider,
 } from "./context/AuthContext";
 
+import { AnalyticsProvider } from "./context/AnalyticsContext";
+
 function App() {
   return (
     <BrowserRouter>
 
       <AuthProvider>
 
-        <AppRoutes />
+        <AnalyticsProvider>
+
+          <AppRoutes />
+
+        </AnalyticsProvider>
 
       </AuthProvider>
 

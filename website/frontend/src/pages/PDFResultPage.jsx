@@ -3,10 +3,12 @@ import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import PageHeader from "../components/common/PageHeader";
+import { useAnalytics } from "../context/AnalyticsContext";
 
 function PDFResultPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const analytics = useAnalytics();
 
   console.log(location.state);
 
@@ -14,6 +16,7 @@ function PDFResultPage() {
     location.state?.analysis ??
     location.state?.data?.analysis ??
     location.state?.data ??
+    analytics?.latestAnalyses?.pdf ??
     location.state ??
     null;
 

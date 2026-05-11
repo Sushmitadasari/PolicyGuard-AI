@@ -28,7 +28,7 @@ import UploadBox from "../components/common/UploadBox";
 import AIStatusBadge from "../components/common/AIStatusBadge";
 
 import { uploadPDF } from "../services/pdfService";
-import { triggerDashboardRefresh } from "../utils/dashboardEvents";
+import { useAnalytics } from "../context/AnalyticsContext";
 
 const PIE_DATA = [
   { name: "Safe", value: 45 },
@@ -67,6 +67,7 @@ const CLAUSES = [
 
 function PDFAnalyzer() {
   const navigate = useNavigate();
+  const analytics = useAnalytics();
 
   const [uploadProgress,
     setUploadProgress] =
@@ -124,8 +125,9 @@ function PDFAnalyzer() {
       // Backend returns analysis data
       const analysisData = response.data;
 
-      // Notify dashboard to refresh immediately
-      try { triggerDashboardRefresh(); } catch (_) {}
+      analytics?.setLatestAnalysis?.("pdf", analysisData);
+
+      await analytics?.refreshAnalytics?.();
 
       // Navigate to result page with data
       setTimeout(() => {

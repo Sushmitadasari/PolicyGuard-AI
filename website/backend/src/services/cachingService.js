@@ -125,6 +125,26 @@ const clear = () => {
 };
 
 /**
+ * Clear cached history list responses for a user
+ * @param {string} userId - User identifier
+ * @returns {number} Number of entries cleared
+ */
+const clearHistoryCache = (userId) => {
+  const userKey = typeof userId === 'string' ? userId.trim() : '';
+  const prefix = userKey ? `history:list:${userKey}:` : 'history:list:';
+  let removed = 0;
+
+  for (const key of cache.keys()) {
+    if (key.startsWith(prefix)) {
+      cache.delete(key);
+      removed += 1;
+    }
+  }
+
+  return removed;
+};
+
+/**
  * Evict oldest entry (least recently used)
  * @returns {boolean} True if entry evicted
  */
@@ -248,6 +268,7 @@ module.exports = {
   has,
   del,
   clear,
+  clearHistoryCache,
   evictOldest,
   getStats,
   cleanupExpired,

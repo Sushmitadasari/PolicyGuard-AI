@@ -5,7 +5,7 @@ import DashboardLayout from "../layouts/DashboardLayout";
 import EmptyState from "../components/common/EmptyState";
 import Modal from "../components/common/Modal";
 import historyService from "../services/historyService";
-import { triggerDashboardRefresh } from "../utils/dashboardEvents";
+import { useAnalytics } from "../context/AnalyticsContext";
 
 const HISTORY_DATA = [];
 
@@ -70,14 +70,16 @@ const formatDate = (dateString) => {
 };
 
 function History() {
+  const analytics = useAnalytics();
   const [selected, setSelected] = useState(null);
   const [histories, setHistories] = useState(HISTORY_DATA);
-  const [loading, setLoading] = useState(true);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
+
+  const loading = analytics?.loading ?? false;
 
   const filtered = histories.filter((item) => {
     const name = getDisplayName(item).toLowerCase();
@@ -90,38 +92,25 @@ function History() {
     return matchSearch && matchFilter;
   });
 
-  const fetchHistory = async () => {
-    setLoading(true);
-    try {
-      const res = await historyService.getHistory();
-      const data = res.data ?? res;
-
-      const items = (Array.isArray(data) ? data : data.items || data.history || []).map((it) => ({
-        id: it.id || it._id || null,
-        fileName: it.fileName || it.documentName || "",
-        documentName: it.documentName || it.fileName || "",
-        source: it.source || "",
-        analysisType: it.analysisType || "",
-        summary: it.summary || "",
-        risk: it.riskScore != null ? `${Math.round(it.riskScore)}%` : "N/A",
-        riskLevel: it.riskLevel || "Unknown",
-        confidence: it.confidence != null ? `${it.confidence}%` : "-",
-        date: it.createdAt || null,
-        metadata: it.metadata || {},
-      }));
-
-      setHistories(items);
-    } catch (err) {
-      console.error("Failed to load history", err);
-      setHistories([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchHistory();
-  }, []);
+    const items = Array.isArray(analytics?.historyItems)
+      ? analytics.historyItems.map((it) => ({
+          id: it.id,
+          fileName: it.fileName,
+          documentName: it.documentName,
+          source: it.source,
+          analysisType: it.analysisType,
+          summary: it.summary,
+          risk: it.riskScore != null ? `${Math.round(it.riskScore)}%` : "N/A",
+          riskLevel: it.riskLevel || "Unknown",
+          confidence: it.confidence != null ? `${it.confidence}%` : "-",
+          date: it.createdAt || null,
+          metadata: it.metadata || {},
+        }))
+      : [];
+
+    setHistories(items);
+  }, [analytics?.historyItems]);
 
   const handleDelete = (id) => {
     setConfirmTarget(id);
@@ -138,7 +127,7 @@ function History() {
       setHistories((prev) => prev.filter((it) => it.id !== id));
       setConfirmOpen(false);
       setConfirmTarget(null);
-      try { triggerDashboardRefresh(); } catch (_) {}
+      await analytics?.refreshAnalytics?.();
     } catch (err) {
       console.error("Failed to delete history item", err);
       alert("Delete failed");

@@ -6,6 +6,8 @@ PolicyGuard-AI is an intelligent privacy policy analysis tool powered by AI. It 
 
 ### ✅ Completed Phases
 
+- **Phase 2**: Backend cache invalidation for history writes and deletes
+- **Phase 3**: Centralized analytics synchronization across Dashboard, History, PDF Results, and Website Results
 - **Phase 5**: PDF Analysis Pipeline (upload, extract, chunk, analyze)
 - **Phase 6**: Website Analysis Pipeline (scrape, clean, analyze)
 - **Phase 7**: History Page with live data, responsive design, and delete functionality
@@ -13,8 +15,6 @@ PolicyGuard-AI is an intelligent privacy policy analysis tool powered by AI. It 
 
 ### 🔄 In Progress / Pending
 
-- **Phase 2**: Backend cache invalidation (history cache not cleared on save/delete)
-- **Phase 3**: Multi-user real-time updates (WebSocket/SSE) — optional
 - **Phase 4**: Advanced features (batch processing, custom policies, etc.)
 
 ## 🛠 Tech Stack
@@ -350,18 +350,13 @@ npm test
 
 ### Current Issues
 
-1. **Cache invalidation (Phase 2 pending)**:
-   - History list cache not cleared on save/delete
-   - History page may show stale data until cache TTL expires (5 minutes)
-   - Workaround: Manually refresh History page or wait 5 minutes
-
-2. **Tailwind CSS warnings**:
+1. **Tailwind CSS warnings**:
    - Some style suggestions from linter (non-blocking)
    - No impact on functionality or appearance
 
 ### Limitations
 
-- **Single-user only** (multi-user real-time updates require WebSocket/SSE — Phase 3)
+- **Single-user only** (multi-user real-time updates via WebSocket/SSE remain a future enhancement)
 - **In-memory cache** (persists only during server runtime; lost on restart)
 - **No batch processing** (analyze one PDF/website at a time)
 - **Basic chatbot** (no persistent conversation history across sessions)
@@ -374,7 +369,13 @@ npm test
 - [ ] Clear history cache keys after DB mutations
 - [ ] Add cache preloading for frequently accessed data
 
-### Phase 3: Real-time Updates
+### Phase 3: Analytics Synchronization
+
+- [x] Centralized AnalyticsContext for shared dashboard/history data
+- [x] Single refresh flow for uploads, scans, deletes, and result pages
+- [x] Synchronized Dashboard, History, PDF Results, and Website Results
+
+### Future: Multi-user Real-time Updates
 
 - [ ] Implement WebSocket or Server-Sent Events (SSE)
 - [ ] Multi-user live dashboard updates
