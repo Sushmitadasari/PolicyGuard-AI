@@ -1,10 +1,9 @@
 package com.policyguardai
 
-import android.content.Context
-import android.content.IntentFilter
+import android.content.Intent
 import android.os.Build
 import android.util.Log
-import android.content.Intent
+import androidx.core.content.ContextCompat
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
@@ -13,8 +12,6 @@ class AppInstallationModule(reactContext: ReactApplicationContext) : ReactContex
     companion object {
         private const val TAG = "AppInstallationModule"
     }
-
-    private var receiver: AppInstallationReceiver? = null
 
     init {
         // Set the React context in the receiver so it can emit events
@@ -26,37 +23,58 @@ class AppInstallationModule(reactContext: ReactApplicationContext) : ReactContex
     @ReactMethod
     fun startListening() {
         try {
-            if (receiver == null) {
-                receiver = AppInstallationReceiver()
-                val filter = IntentFilter(Intent.ACTION_PACKAGE_ADDED)
-                filter.addDataScheme("package")
-
-                val context = reactApplicationContext
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
-                } else {
-                    @Suppress("UnspecifiedRegisterReceiverFlag")
-                    context.registerReceiver(receiver, filter)
-                }
-
-                Log.d(TAG, "App installation listener started")
+            val context = reactApplicationContext
+            val serviceIntent = Intent(context, MonitoringService::class.java)
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                ContextCompat.startForegroundService(context, serviceIntent)
+            } else {
+                context.startService(serviceIntent)
             }
+            
+            Log.d(TAG, "Foreground MonitoringService started")
         } catch (e: Exception) {
-            Log.e(TAG, "Error starting listener: ${e.message}")
+            Log.e(TAG, "Error starting MonitoringService: ${e.message}")
         }
     }
 
     @ReactMethod
     fun stopListening() {
         try {
-            if (receiver != null) {
-                val context = reactApplicationContext
-                context.unregisterReceiver(receiver)
-                receiver = null
-                Log.d(TAG, "App installation listener stopped")
-            }
+            val context = reactApplicationContext
+            val serviceIntent = Intent(context, MonitoringService::class.java)
+            context.stopService(serviceIntent)
+            Log.d(TAG, "Foreground MonitoringService stopped")
         } catch (e: Exception) {
-            Log.e(TAG, "Error stopping listener: ${e.message}")
+            Log.e(TAG, "Error stopping MonitoringService: ${e.message}")
+        }
+    }
+
+    @ReactMethod
+    fun getInitialAction(promise: com.facebook.react.bridge.Promise) {
+        try {
+            val activity = getCurrentActivity() ?: reactApplicationContext.currentActivity
+            if (activity != null) {
+                val intent = activity.intent
+                val action = intent?.getStringExtra("action")
+                val packageName = intent?.getStringExtra("packageName")
+                
+                if (action != null && packageName != null) {
+                    val map = com.facebook.react.bridge.Arguments.createMap()
+                    map.putString("action", action)
+                    map.putString("packageName", packageName)
+                    promise.resolve(map)
+                    
+                    // Clear the intent so it doesn't trigger again on reload
+                    intent.removeExtra("action")
+                    intent.removeExtra("packageName")
+                    return
+                }
+            }
+            promise.resolve(null)
+        } catch (e: Exception) {
+            promise.reject("ERROR", e.message)
         }
     }
 }
+

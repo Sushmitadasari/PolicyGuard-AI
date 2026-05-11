@@ -84,11 +84,13 @@ class AppInstallationReceiver : BroadcastReceiver() {
         context: Context
     ) {
         try {
-            val eventData = mapOf(
-                "packageName" to packageName,
-                "appName" to appName,
-                "permissions" to permissions
-            )
+            val eventData = com.facebook.react.bridge.Arguments.createMap()
+            eventData.putString("packageName", packageName)
+            eventData.putString("appName", appName)
+            
+            val permissionsArray = com.facebook.react.bridge.Arguments.createArray()
+            permissions.forEach { permissionsArray.pushString(it) }
+            eventData.putArray("permissions", permissionsArray)
 
             reactContext?.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
                 ?.emit("APP_INSTALLED", eventData)

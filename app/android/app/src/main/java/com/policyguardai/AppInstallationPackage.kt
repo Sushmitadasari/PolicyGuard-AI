@@ -1,35 +1,25 @@
 package com.policyguardai
 
-import com.facebook.react.TurboReactPackage
+import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
-import com.facebook.react.module.model.ReactModuleInfo
-import com.facebook.react.module.model.ReactModuleInfoProvider
+import com.facebook.react.uimanager.ViewManager
 
-class AppInstallationPackage : TurboReactPackage() {
-    override fun getModule(
-        name: String,
+class AppInstallationPackage : ReactPackage {
+
+    override fun createNativeModules(
         reactContext: ReactApplicationContext
-    ): NativeModule? {
-        return when (name) {
-            "AppInstallationListener" -> AppInstallationModule(reactContext)
-            else -> null
-        }
+    ): List<NativeModule> {
+
+        return listOf(
+            AppInstallationModule(reactContext)
+        )
     }
 
-    override fun getReactModuleInfoProvider(): ReactModuleInfoProvider {
-        return ReactModuleInfoProvider {
-            mapOf(
-                "AppInstallationListener" to ReactModuleInfo(
-                    name = "AppInstallationListener",
-                    className = "AppInstallationModule",
-                    canOverrideExistingModule = true,
-                    needsEagerInit = true,
-                    hasConstants = false,
-                    isCxxModule = false,
-                    isTurboModule = true
-                )
-            )
-        }
+    override fun createViewManagers(
+        reactContext: ReactApplicationContext
+    ): List<ViewManager<*, *>> {
+
+        return emptyList()
     }
 }
