@@ -1,40 +1,97 @@
-const keywords = [
-  "privacy",
-  "terms",
-  "policy",
-  "cookies",
-  "legal",
-];
-
-const links = [...document.querySelectorAll("a")];
-
-const matchedLinks = links.filter((link) => {
-  const text = (link.innerText || "").toLowerCase();
-  const href = (link.href || "").toLowerCase();
-
-  return keywords.some(
-    (keyword) =>
-      text.includes(keyword) ||
-      href.includes(keyword)
-  );
-});
-
 console.log(
-  "POLICYGUARD AI Detected Links:",
-  matchedLinks
+  "POLICYGUARD AI CONTENT SCRIPT ACTIVE"
 );
 
-if (matchedLinks.length > 0) {
-  const existingBanner = document.getElementById(
-    "policyguard-banner"
+const keywords = [
+  "privacy",
+  "privacy-policy",
+  "privacy policy",
+  "terms",
+  "terms-of-service",
+  "terms-and-conditions",
+  "cookies",
+  "cookie-policy",
+  "legal",
+  "gdpr",
+  "security",
+  "data-policy",
+];
+
+const detectPrivacyPage = () => {
+
+  const currentUrl =
+    window.location.href.toLowerCase();
+
+  // DETECT CURRENT PAGE URL
+  const urlMatched =
+    keywords.some((keyword) =>
+      currentUrl.includes(keyword)
+    );
+
+  // DETECT PAGE TITLE
+  const titleMatched =
+    keywords.some((keyword) =>
+      document.title
+        .toLowerCase()
+        .includes(keyword)
+    );
+
+  // DETECT ALL LINKS
+  const links = [
+    ...document.querySelectorAll("a"),
+  ];
+
+  const matchedLinks =
+    links.filter((link) => {
+
+      const text =
+        (link.innerText || "")
+          .toLowerCase();
+
+      const href =
+        (link.href || "")
+          .toLowerCase();
+
+      return keywords.some(
+        (keyword) =>
+          text.includes(keyword) ||
+          href.includes(keyword)
+      );
+
+    });
+
+  console.log(
+    "POLICYGUARD DETECTED LINKS:",
+    matchedLinks
   );
+
+  return (
+    urlMatched ||
+    titleMatched ||
+    matchedLinks.length > 0
+  );
+};
+
+// EXTRACT WEBSITE TEXT
+const pageText =
+  document.body.innerText;
+
+// MAIN DETECTION
+if (detectPrivacyPage()) {
+
+  const existingBanner =
+    document.getElementById(
+      "policyguard-banner"
+    );
 
   if (!existingBanner) {
 
-    // CREATE MAIN BANNER
-    const banner = document.createElement("div");
+    // CREATE BANNER
+    const banner =
+      document.createElement("div");
 
-    banner.id = "policyguard-banner";
+    banner.id =
+      "policyguard-banner";
 
     banner.innerHTML = `
       <div id="policyguard-main-banner">
@@ -48,12 +105,11 @@ if (matchedLinks.length > 0) {
           <div>
 
             <h2 id="policyguard-title">
-              POLICYGUARD AI — HIGH PRIVACY RISK DETECTED
+              POLICYGUARD AI DETECTED A PRIVACY POLICY
             </h2>
 
             <p id="policyguard-text">
-              This website contains privacy/legal policies
-              that may collect behavioral and tracking data.
+              This website contains legal/privacy terms that may affect your data privacy.
             </p>
 
           </div>
@@ -61,19 +117,21 @@ if (matchedLinks.length > 0) {
         </div>
 
         <button id="policyguard-button">
-          Open Dashboard
+          Analyze Now
         </button>
 
       </div>
     `;
 
-    // CREATE STYLES
-    const style = document.createElement("style");
+    // STYLES
+    const style =
+      document.createElement("style");
 
     style.innerHTML = `
       #policyguard-main-banner {
 
         position: fixed;
+
         top: 0;
         left: 0;
 
@@ -98,9 +156,11 @@ if (matchedLinks.length > 0) {
 
         font-family: Inter, sans-serif;
 
-        box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+        box-shadow:
+          0 4px 20px rgba(0,0,0,0.35);
 
-        animation: policyguardSlideDown 0.4s ease;
+        animation:
+          policyguardSlideDown 0.4s ease;
       }
 
       #policyguard-left {
@@ -160,39 +220,160 @@ if (matchedLinks.length > 0) {
       }
     `;
 
-    // ADD STYLE
     document.head.appendChild(style);
 
-    // ADD BANNER
     document.body.appendChild(banner);
 
-    // BUTTON CLICK
-    const button = document.getElementById(
-      "policyguard-button"
-    );
+    // BUTTON
+    const button =
+      document.getElementById(
+        "policyguard-button"
+      );
 
-   if (button) {
+    if (button) {
 
-  button.addEventListener("click", () => {
+      button.addEventListener(
+        "click",
+        async () => {
 
-    try {
+          try {
 
-      chrome.runtime.sendMessage({
-        type: "OPEN_EXTENSION"
-      });
+            button.innerText =
+              "Analyzing...";
 
-    } catch (error) {
+            const response =
+              await fetch(
+                "http://localhost:5000/api/analyze",
+                {
+                  method: "POST",
 
-      console.error(
-        "POLICYGUARD AI Error:",
-        error
+                  headers: {
+                    "Content-Type":
+                      "application/json",
+                  },
+
+                  body: JSON.stringify({
+                    url:
+                      window.location.href,
+
+                    content: pageText,
+                  }),
+                }
+              );
+
+            const data =
+              await response.json();
+
+            console.log(
+              "POLICYGUARD RESULT:",
+              data
+            );
+
+            // UPDATE TITLE
+            document.getElementById(
+              "policyguard-title"
+            ).innerText =
+              `RISK SCORE: ${data.riskScore} (${data.riskLevel})`;
+
+            // UPDATE SUMMARY
+            document.getElementById(
+              "policyguard-text"
+            ).innerText =
+              data.summary;
+
+            // UPDATE BANNER COLORS
+            const mainBanner =
+              document.getElementById(
+                "policyguard-main-banner"
+              );
+
+            if (
+              data.riskLevel === "HIGH"
+            ) {
+
+              mainBanner.style.background =
+                "linear-gradient(90deg,#7f1d1d,#dc2626)";
+
+            } else if (
+              data.riskLevel ===
+              "MEDIUM"
+            ) {
+
+              mainBanner.style.background =
+                "linear-gradient(90deg,#92400e,#f59e0b)";
+
+            } else {
+
+              mainBanner.style.background =
+                "linear-gradient(90deg,#065f46,#10b981)";
+            }
+
+            // SHOW RISKS
+            const risksHtml =
+              data.risks
+                .map(
+                  (risk) => `
+                <div style="
+                  margin-top:8px;
+                  font-size:13px;
+                ">
+                  ⚠ ${risk.title}
+                </div>
+              `
+                )
+                .join("");
+
+            const risksContainer =
+              document.createElement(
+                "div"
+              );
+
+            risksContainer.innerHTML =
+              risksHtml;
+
+            risksContainer.style.marginTop =
+              "10px";
+
+            document
+              .getElementById(
+                "policyguard-left"
+              )
+              .appendChild(
+                risksContainer
+              );
+
+            button.innerText =
+              "Analysis Complete";
+
+          } catch (error) {
+
+            console.error(
+              "POLICYGUARD ERROR:",
+              error
+            );
+
+            button.innerText =
+              "Analysis Failed";
+          }
+
+        }
       );
 
     }
 
-  });
+  }
 
 }
+
+// AUTO RECHECK FOR DYNAMIC SITES
+setTimeout(() => {
+
+  if (detectPrivacyPage()) {
+
+    console.log(
+      "POLICYGUARD AI detected policy page after delay"
+    );
 
   }
-}
+
+}, 3000);
