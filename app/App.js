@@ -23,6 +23,7 @@ import {
   TouchableOpacity,
   UIManager,
   View,
+  AppState,
 } from 'react-native';
 
 import { NavigationContainer } from '@react-navigation/native';
@@ -276,8 +277,11 @@ function OverviewCard({ overallSafety, safetyStatus, totalApps }) {
   );
 }
 
-function AppCard({ app, onPressDetails, onAlertPress }) {
+const AppCard = React.memo(function AppCard({ app, onOpenDetails, onOpenAlert }) {
   const reason = safeLines(app.reasons?.[0] || 'No obvious privacy concerns were detected.');
+
+  const handlePressDetails = () => onOpenDetails && onOpenDetails(app);
+  const handleAlertPress = () => onOpenAlert && onOpenAlert(app);
 
   return (
     <View style={styles.appCard}>
@@ -303,7 +307,7 @@ function AppCard({ app, onPressDetails, onAlertPress }) {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.viewButton} onPress={onPressDetails} activeOpacity={0.8}>
+        <TouchableOpacity style={styles.viewButton} onPress={handlePressDetails} activeOpacity={0.8}>
           <Text style={styles.viewButtonText}>View</Text>
         </TouchableOpacity>
       </View>
@@ -315,11 +319,9 @@ function AppCard({ app, onPressDetails, onAlertPress }) {
 
       <View style={styles.permissionHeaderRow}>
         <Text style={styles.sectionLabel}>Permissions</Text>
-        {app.score >= 71 ? (
-          <TouchableOpacity onPress={onAlertPress} activeOpacity={0.8}>
-            <Text style={styles.alertLink}>View alert</Text>
-          </TouchableOpacity>
-        ) : null}
+        <TouchableOpacity onPress={handleAlertPress} activeOpacity={0.8}>
+          <Text style={styles.alertLink}>View alert</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.permissionsRow}>
@@ -335,7 +337,7 @@ function AppCard({ app, onPressDetails, onAlertPress }) {
       </View>
     </View>
   );
-}
+});
 
 function ScreenWrapper({ children }) {
   const insets = useSafeAreaInsets();
@@ -361,8 +363,17 @@ function DashboardScreen({ apps, overallSafety, safetyStatus, isScanning, onScan
 
   return (
     <ScreenWrapper>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} stickyHeaderIndices={[1]}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} stickyHeaderIndices={[3]}>
         <ScreenHeader />
+
+        <View style={styles.dashboardGridSection}>
+          <DashboardCard icon="⚠️" label="High Risk Apps" value={highRiskCount} color="#ef4444" />
+          <DashboardCard icon="✅" label="Safe Applications" value={safeCount} color="#10b981" />
+          <DashboardCard icon="📊" label="Total Applications" value={apps.length} color="#3b82f6" />
+          <DashboardCard icon="📱" label="Active Alerts" value={highRiskCount} color="#2563EB" />
+        </View>
+
+        <OverviewCard overallSafety={overallSafety} safetyStatus={safetyStatus} totalApps={apps.length} highRiskCount={highRiskCount} safeCount={safeCount} />
 
         <View style={styles.searchFilterContainer}>
           <View style={styles.searchBox}>
@@ -377,18 +388,9 @@ function DashboardScreen({ apps, overallSafety, safetyStatus, isScanning, onScan
           </View>
         </View>
 
-        <View style={styles.dashboardGridSection}>
-          <DashboardCard icon="⚠️" label="High Risk Apps" value={highRiskCount} color="#ef4444" />
-          <DashboardCard icon="✅" label="Safe Applications" value={safeCount} color="#10b981" />
-          <DashboardCard icon="📊" label="Total Applications" value={apps.length} color="#3b82f6" />
-          <DashboardCard icon="📱" label="Active Alerts" value={highRiskCount} color="#2563EB" />
-        </View>
-
-        <OverviewCard overallSafety={overallSafety} safetyStatus={safetyStatus} totalApps={apps.length} highRiskCount={highRiskCount} safeCount={safeCount} />
-
-        <Text style={styles.sectionHeading}>{searchQuery ? `${filteredApps.length} Apps Found` : 'Installed apps'}</Text>
+        {searchQuery ? <Text style={styles.sectionHeading}>{filteredApps.length} Apps Found</Text> : null}
         {filteredApps.slice(0, 5).map((app) => (
-          <AppCard key={app.id} app={app} onPressDetails={() => onOpenDetails(app)} onAlertPress={() => onOpenAlert(app)} />
+          <AppCard key={app.id} app={app} onOpenDetails={onOpenDetails} onOpenAlert={onOpenAlert} />
         ))}
         {filteredApps.length === 0 && (
           <View style={styles.emptyStateCard}>
@@ -461,7 +463,7 @@ function ApplicationsScreen({ apps, onOpenDetails, onOpenAlert, isScanning, onSc
 
         <Text style={styles.sectionHeading}>{filteredApps.length} Apps Found</Text>
         {filteredApps.map((app) => (
-          <AppCard key={app.id} app={app} onPressDetails={() => onOpenDetails(app)} onAlertPress={() => onOpenAlert(app)} />
+          <AppCard key={app.id} app={app} onOpenDetails={onOpenDetails} onOpenAlert={onOpenAlert} />
         ))}
         {filteredApps.length === 0 && (
           <View style={styles.emptyStateCard}>
@@ -496,7 +498,7 @@ function LiveScanScreen({ apps, overallSafety, safetyStatus, isScanning, onScan,
 
         <Text style={styles.sectionHeading}>Results</Text>
         {apps.map((app) => (
-          <AppCard key={app.id} app={app} onPressDetails={() => onOpenDetails(app)} onAlertPress={() => onOpenAlert(app)} />
+          <AppCard key={app.id} app={app} onOpenDetails={onOpenDetails} onOpenAlert={onOpenAlert} />
         ))}
       </ScrollView>
     </ScreenWrapper>
@@ -511,7 +513,7 @@ function AlertsScreen({ apps, onScan, onOpenDetails, onOpenAlert, isScanning }) 
         <Text style={styles.sectionHeading}>Privacy alerts</Text>
         {apps.length > 0 ? (
           apps.map((app) => (
-            <AppCard key={app.id} app={app} onPressDetails={() => onOpenDetails(app)} onAlertPress={() => onOpenAlert(app)} />
+            <AppCard key={app.id} app={app} onOpenDetails={onOpenDetails} onOpenAlert={onOpenAlert} />
           ))
         ) : (
           <View style={styles.emptyStateCard}>
@@ -605,7 +607,6 @@ function SettingsScreen({ onScan, isScanning }) {
     <ScreenWrapper>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <ScreenHeader />
-        <Text style={styles.sectionHeading}>App Settings</Text>
         <View style={styles.settingsCard}>
           <Text style={styles.settingsTitle}>Scan behavior</Text>
           <Text style={styles.settingsText}>Manual scan refresh is enabled. Open any screen to run a new privacy scan.</Text>
@@ -626,32 +627,15 @@ function SettingsScreen({ onScan, isScanning }) {
 }
 
 function AlertSheet({ visible, app, onClose, onViewDetails }) {
-  const slideAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (visible) {
-      slideAnim.setValue(0);
-      Animated.timing(slideAnim, {
-        toValue: 1,
-        duration: 220,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [slideAnim, visible]);
-
-  const translateY = slideAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [180, 0],
-  });
+  const insets = useSafeAreaInsets();
 
   if (!visible || !app) return null;
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.sheetOverlay}>
         <Pressable style={styles.sheetBackdrop} onPress={onClose} />
-        <Animated.View style={[styles.sheetCard, { transform: [{ translateY }] }]}>
+        <View style={[styles.sheetCard, { paddingBottom: Math.max(18, insets.bottom + 12) }]}>
           <View style={styles.sheetHandle} />
           <Text style={styles.alertTitle}>Privacy alert</Text>
           <Text style={styles.alertApp}>{app.name}</Text>
@@ -670,20 +654,22 @@ function AlertSheet({ visible, app, onClose, onViewDetails }) {
               <Text style={styles.sheetSecondaryButtonText}>Ignore</Text>
             </TouchableOpacity>
           </View>
-        </Animated.View>
+        </View>
       </View>
     </Modal>
   );
 }
 
 function DetailSheet({ app, onClose }) {
+  const insets = useSafeAreaInsets();
+
   if (!app) return null;
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.sheetOverlay}>
         <Pressable style={styles.sheetBackdrop} onPress={onClose} />
-        <View style={[styles.sheetCard, styles.detailSheetCard]}>
+        <View style={[styles.sheetCard, styles.detailSheetCard, { paddingBottom: Math.max(24, insets.bottom + 12) }]}>
           <View style={styles.sheetHandle} />
           <Text style={styles.detailTitle}>{app.name}</Text>
           <Text style={styles.detailScore}>{app.score}/100 · {app.risk}</Text>
@@ -737,6 +723,7 @@ export default function App() {
   const [apps, setApps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isScanning, setIsScanning] = useState(false);
+  const [pendingTargetPackage, setPendingTargetPackage] = useState(null);
   const [scanSeed, setScanSeed] = useState(0);
   const [selectedApp, setSelectedApp] = useState(null);
   const [alertApp, setAlertApp] = useState(null);
@@ -768,6 +755,17 @@ export default function App() {
     }
   }
 
+  // Monitor pending target and apps array to automatically open the Detail Sheet
+  useEffect(() => {
+    if (pendingTargetPackage && apps.length > 0) {
+      const target = apps.find(a => a.packageName === pendingTargetPackage);
+      if (target) {
+        setSelectedApp(target);
+        setPendingTargetPackage(null); // Clear it once handled
+      }
+    }
+  }, [apps, pendingTargetPackage]);
+
   useEffect(() => {
     async function setupApp() {
       if (Platform.OS === 'android' && Platform.Version >= 33) {
@@ -778,13 +776,52 @@ export default function App() {
         }
       }
       
+      
       if (AppInstallationListener) {
         AppInstallationListener.startListening();
+        
+        try {
+          // Consume intent on mount if any, but we won't process it until handleIntentAction
+        } catch (e) {
+          console.log("Error getting initial action", e);
+        }
       }
       
-      refreshApps().finally(() => setLoading(false));
+      await refreshApps();
+      setLoading(false);
+
+      const handleIntentAction = async () => {
+        if (!AppInstallationListener) return;
+        try {
+          const actionData = await AppInstallationListener.getInitialAction();
+          if (actionData && actionData.action === 'view_details' && actionData.packageName) {
+             setPendingTargetPackage(actionData.packageName);
+          }
+        } catch (e) {
+          console.log("Error getting action from AppState", e);
+        }
+      };
+
+      // Check immediately on mount (Cold boot)
+      handleIntentAction();
+
+      const subscription = AppState.addEventListener('change', nextAppState => {
+        if (nextAppState === 'active') {
+          handleIntentAction(); // Check when returning to foreground (Warm boot)
+        }
+      });
+      
+      // Cleanup
+      return () => {
+        subscription.remove();
+      };
     }
-    setupApp();
+    
+    // We only want to run setupApp on mount, but we need to handle the cleanup
+    let cleanup = () => {};
+    setupApp().then(clean => {
+      if (clean) cleanup = clean;
+    });
 
     const installListener = DeviceEventEmitter.addListener('APP_INSTALLED', async (eventData) => {
       const { packageName, appName, permissions } = eventData;
@@ -801,8 +838,8 @@ export default function App() {
       };
       
       setApps(prevApps => {
-        if (prevApps.some(a => a.packageName === packageName)) return prevApps;
-        return [newApp, ...prevApps];
+        const filteredApps = prevApps.filter(a => a.packageName !== packageName);
+        return [newApp, ...filteredApps];
       });
 
       if (assessment.score >= 46) {
@@ -813,6 +850,7 @@ export default function App() {
     });
 
     return () => {
+      cleanup();
       installListener.remove();
       if (AppInstallationListener) {
         AppInstallationListener.stopListening();
@@ -953,7 +991,7 @@ export default function App() {
                 apps={highRiskApps}
                 onScan={handleScan}
                 onOpenDetails={setSelectedApp}
-                onOpenAlert={(app) => setAlertApp(app || highRiskApps[0] || null)}
+                onOpenAlert={setAlertApp}
                 isScanning={isScanning}
               />
             )}
