@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import android.graphics.BitmapFactory
 import androidx.core.app.NotificationCompat
 
 object NotificationHelper {
@@ -70,9 +71,22 @@ object NotificationHelper {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_notification) // Shield icon
+            val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_notification) // monochrome small icon for status bar
                 .setColor(android.graphics.Color.parseColor("#2563EB")) // Theme blue color
+
+            // Try to set a colored large icon (uses mipmap launcher icon) so the drawer shows app artwork
+            try {
+                val largeRes = try {
+                    R.mipmap.ic_launcher_round
+                } catch (e: Exception) {
+                    R.mipmap.ic_launcher
+                }
+                val largeBmp = BitmapFactory.decodeResource(context.resources, largeRes)
+                if (largeBmp != null) builder.setLargeIcon(largeBmp)
+            } catch (e: Exception) {
+                // ignore large icon problems
+            }
                 .setContentTitle("⚠ Privacy Risk Alert")
                 .setContentText("Risk Score: $score/100 - $riskLevel")
                 .setStyle(
