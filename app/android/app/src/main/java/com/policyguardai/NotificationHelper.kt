@@ -71,7 +71,7 @@ object NotificationHelper {
             )
 
             val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.ic_secure) // Shield icon
+                .setSmallIcon(R.drawable.ic_notification) // Shield icon
                 .setColor(android.graphics.Color.parseColor("#2563EB")) // Theme blue color
                 .setContentTitle("⚠ Privacy Risk Alert")
                 .setContentText("Risk Score: $score/100 - $riskLevel")
