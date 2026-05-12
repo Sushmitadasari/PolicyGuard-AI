@@ -87,7 +87,8 @@ object NotificationHelper {
             } catch (e: Exception) {
                 // ignore large icon problems
             }
-                .setContentTitle("⚠ Privacy Risk Alert")
+
+            builder.setContentTitle("⚠ Privacy Risk Alert")
                 .setContentText("Risk Score: $score/100 - $riskLevel")
                 .setStyle(
                     NotificationCompat.BigTextStyle()
@@ -100,7 +101,8 @@ object NotificationHelper {
                 .setContentIntent(openPendingIntent)
                 .addAction(android.R.drawable.ic_menu_view, "View Details", detailsPendingIntent)
                 .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Ignore", ignorePendingIntent)
-                .build()
+
+            val notification = builder.build()
 
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.notify(notificationId, notification)

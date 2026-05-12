@@ -35,6 +35,7 @@ const { InstalledApps, AppInstallationListener } = NativeModules;
 const eventEmitter = new NativeEventEmitter(InstalledApps);
 const Tab = createBottomTabNavigator();
 
+// Local keyword-based rules that power the on-device privacy score.
 const RISK_RULES = [
   { keywords: ['vpn', 'proxy', 'tunnel'], points: 35, reason: 'This app can route your internet traffic through another service.' },
   { keywords: ['cleaner', 'booster', 'optimizer', 'speed'], points: 30, reason: 'This app promises device cleanup, which often needs broad access.' },
@@ -44,6 +45,7 @@ const RISK_RULES = [
   { keywords: ['mod', 'crack', 'hack'], points: 40, reason: 'This app looks unofficial or modified, so its behavior is harder to trust.' },
 ];
 
+// Built-in privacy policy links for popular apps.
 const KNOWN_PRIVACY_URLS = {
   'com.whatsapp': 'https://www.whatsapp.com/legal/privacy-policy',
   'com.instagram.android': 'https://privacycenter.instagram.com/policy',
@@ -53,6 +55,7 @@ const KNOWN_PRIVACY_URLS = {
   'com.snapchat.android': 'https://values.snap.com/privacy/privacy-policy',
 };
 
+// Main navigation sections shown in the app.
 const MENU_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: '🛡️' },
   { id: 'applications', label: 'Applications', icon: '📱' },
@@ -67,6 +70,7 @@ function safeLines(value) {
   return (value || '').replace(/\s+/g, ' ').trim();
 }
 
+// Convert Android permission strings into human-readable labels.
 function permissionLabel(permission) {
   const value = permission.toLowerCase();
   if (value.includes('camera')) return 'Camera';
@@ -82,6 +86,7 @@ function permissionLabel(permission) {
   return segment.replace(/_/g, ' ');
 }
 
+// Turn raw permissions into simple privacy explanations.
 function humanReasonFromPermissions(permissions = []) {
   const list = permissions.map((p) => p.toLowerCase());
   const sensitive = [];
@@ -123,6 +128,7 @@ function humanReasonFromPermissions(permissions = []) {
   return sensitive;
 }
 
+// Combine permission signals and app-name keywords into a 0-100 risk score.
 function getRiskAssessment(packageName, appName, permissions = []) {
   const identity = `${packageName} ${appName}`.toLowerCase();
   const reasons = [];
@@ -174,6 +180,7 @@ function riskColor(score) {
   return '#10b981';
 }
 
+// Build a short list of actionable safety suggestions.
 function recommendationsFromReasons(reasons = []) {
   const joined = reasons.join(' ').toLowerCase();
   const recommendations = [];
@@ -204,6 +211,7 @@ function recommendationsFromReasons(reasons = []) {
   return recommendations.slice(0, 3);
 }
 
+// Normalize native app data into the shape used by the UI.
 function formatApps(installedApps, scanSeed = 0) {
   return installedApps.map((app, index) => {
     const permissions = app.permissions || [];
@@ -755,19 +763,21 @@ export default function App() {
     }
   }
 
-  // Monitor pending target and apps array to automatically open the Detail Sheet
+  // Open the detail sheet when a notification targets a specific app.
   useEffect(() => {
     if (pendingTargetPackage && apps.length > 0) {
       const target = apps.find(a => a.packageName === pendingTargetPackage);
       if (target) {
+        setAlertApp(null);       // Bug 2 fix: clear AlertSheet before opening DetailSheet
         setSelectedApp(target);
-        setPendingTargetPackage(null); // Clear it once handled
+        setPendingTargetPackage(null);
       }
     }
   }, [apps, pendingTargetPackage]);
 
   useEffect(() => {
     async function setupApp() {
+      // Request notification permission on Android 13+.
       if (Platform.OS === 'android' && Platform.Version >= 33) {
         try {
           await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
@@ -777,6 +787,7 @@ export default function App() {
       }
       
       
+      // Start native install tracking when the Android listener exists.
       if (AppInstallationListener) {
         AppInstallationListener.startListening();
         
@@ -790,6 +801,7 @@ export default function App() {
       await refreshApps();
       setLoading(false);
 
+      // Handle notification actions like "View Details" from background or cold start.
       const handleIntentAction = async () => {
         if (!AppInstallationListener) return;
         try {
@@ -823,6 +835,7 @@ export default function App() {
       if (clean) cleanup = clean;
     });
 
+    // React to newly installed apps and score them immediately.
     const installListener = DeviceEventEmitter.addListener('APP_INSTALLED', async (eventData) => {
       const { packageName, appName, permissions } = eventData;
       showSnackbar(`Analyzing newly installed app: ${appName}`);
@@ -849,9 +862,17 @@ export default function App() {
       await refreshApps();
     });
 
+    // Bug 3 fix: listen for NEW_INTENT_ACTION emitted by Kotlin when app is already
+    // in foreground and user taps "View Details" on the notification.
+    // Handle foreground notification taps without restarting the app.
+    const newIntentListener = DeviceEventEmitter.addListener('NEW_INTENT_ACTION', () => {
+      handleIntentAction();
+    });
+
     return () => {
       cleanup();
       installListener.remove();
+      newIntentListener.remove();
       if (AppInstallationListener) {
         AppInstallationListener.stopListening();
       }
@@ -870,6 +891,7 @@ export default function App() {
   const safetyStatus = getSafetyStatus(100 - overallSafety); // The risk is inverted for safety status
   const highRiskApps = useMemo(() => orderedApps.filter((app) => app.score >= 70), [orderedApps]);
 
+  // Small in-app status message used for scan and install events.
   function showSnackbar(message) {
     setSnackbarMessage(message);
     setSnackbarVisible(true);
@@ -887,6 +909,7 @@ export default function App() {
 
 
 
+  // Refresh the installed-app list and recompute the privacy score.
   async function handleScan() {
     if (isScanning) return;
 
@@ -894,14 +917,17 @@ export default function App() {
     setSelectedApp(null);
     setAlertApp(null);
 
-    if (scanTimer.current) clearTimeout(scanTimer.current);
-
-    scanTimer.current = setTimeout(async () => {
+    // Bug 1 fix: use try/finally so setIsScanning(false) always runs,
+    // even if refreshApps throws or hangs.
+    try {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       await refreshApps();
-      setIsScanning(false);
       showSnackbar('Privacy scan completed');
-    }, 1600);
+    } catch (e) {
+      console.log('Scan error:', e);
+    } finally {
+      setIsScanning(false);
+    }
   }
 
   return (

@@ -24,5 +24,8 @@ class MainActivity : ReactActivity() {
   override fun onNewIntent(intent: Intent?) {
       super.onNewIntent(intent)
       setIntent(intent)
+      // Bug 3 fix: notify the JS layer so it calls getInitialAction() immediately,
+      // even when the app is already in the foreground (AppState doesn't change in this case).
+      AppInstallationModule.emitNewIntentEvent(intent)
   }
 }
