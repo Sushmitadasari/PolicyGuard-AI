@@ -416,21 +416,6 @@ This integration differentiates the platform from standard summarization tools.
 * Enterprise privacy monitoring dashboard
 * Offline legal document preprocessing
 
----
-
-# Project Limitations
-
-* AI-generated summaries may vary depending on policy complexity
-* Large legal documents increase token processing costs
-* Real-time analysis depends on third-party AI API availability
-* Browser extension support currently optimized for Chromium-based browsers
-
----
-
-# Contributors
-
-* Dasari Venkata Ratna Sri Sushmita
-* Team Members
 
 ---
 
