@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Scan operations
   startScan: () => ipcRenderer.send('start-scan'),
+  getInstalledApps: () => ipcRenderer.invoke('get-installed-apps'),
   onScanCompleted: (callback) => {
     ipcRenderer.on('scan-completed', callback);
   },

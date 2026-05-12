@@ -1,7 +1,7 @@
 const { app, BrowserWindow, Menu, ipcMain, Notification, dialog, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
-
+const { exec } = require('child_process');
 // Check if running in development mode
 const isDev = !app.isPackaged;
 
@@ -119,10 +119,6 @@ const createWindow = () => {
       splashWindow = null;
     }
     mainWindow.show();
-
-    if (isDev) {
-      mainWindow.webContents.openDevTools();
-    }
   });
 
   mainWindow.on('closed', () => {
@@ -283,6 +279,126 @@ ipcMain.on('start-scan', (event) => {
     }
     event.sender.send('scan-completed');
   }, 2000);
+});
+
+ipcMain.handle('get-installed-apps', async () => {
+  if (process.platform !== 'win32') return [];
+
+  return new Promise(async (resolve) => {
+    const { shell } = require('electron');
+    const startMenuPaths = [
+      path.join(process.env.ProgramData || 'C:\\ProgramData', 'Microsoft', 'Windows', 'Start Menu', 'Programs'),
+      path.join(process.env.APPDATA || '', 'Microsoft', 'Windows', 'Start Menu', 'Programs')
+    ];
+
+    const uniqueAppsByExe = new Map();
+
+    const scanDir = async (dir) => {
+      if (!fs.existsSync(dir)) return;
+      const files = fs.readdirSync(dir);
+      for (const file of files) {
+        const fullPath = path.join(dir, file);
+        try {
+          const stat = fs.statSync(fullPath);
+          if (stat.isDirectory()) {
+            if (file.toLowerCase().includes('administrative tools') || file.toLowerCase().includes('windows system') || file.toLowerCase().includes('windows powershell')) continue;
+            await scanDir(fullPath);
+          } else if (file.endsWith('.lnk')) {
+            const name = file.replace('.lnk', '');
+            const lowerName = name.toLowerCase();
+
+            // STRICT FILTERING EXACTLY AS REQUESTED
+            const badWords = [
+              'runtime', 'sdk', 'documentation', 'docs', 'update', 'updater', 'helper', 'launcher', 'service', 'add-in', 'webview', 'registry', 'installer', 'bootstrap', 'package', 'driver', 'redistributable', 'extension', 'component', 'configuration', 'shell', 'terminal', 'compiler', 'debugger', 'framework', 'library', 'plugin', 'repair', 'reset', 'cache', 'monitor', 'recorder', 'telemetry', 'utility',
+              'uninstall', 'remove', 'readme', 'manual', 'setup', 'config', 'safe mode', 'skinned', 'git bash', 'git cmd', 'git gui', 'linguist', 'idle', 'wsl', 'website', 'help',
+              'putty', 'pageant', 'mysql', 'snoretoast', 'cli',
+              'patch up', 'saves', 'msb', 'psftp', 'stack builder', 'language preferences', 'console', 'tool', 'manager', 'server', 'client',
+              'python', 'node.js', 'node', 'pgadmin', 'onenote', 'sandbox', 'comet', '64-bit', 'version', 'virtualbox', 'vmware', 'hyper-v', 'mcafee', 'security', 'legacy', 'access', 'c++'
+            ];
+            if (badWords.some(word => lowerName.includes(word))) continue;
+
+            if (name.length <= 2) continue; // remove random short names like "cc", "ok"
+            if (/[^a-zA-Z0-9\s\-_.,()+]/g.test(name)) continue; // remove strange symbols
+
+            const details = shell.readShortcutLink(fullPath);
+            const targetPath = details.target ? details.target : '';
+            const lowerTarget = targetPath.toLowerCase();
+
+            // Ignore Windows internal, admin tools, and web links
+            if (!targetPath || lowerTarget.includes('c:\\\\windows') || lowerTarget.includes('system32') || lowerTarget.includes('syswow64')) continue;
+            if (lowerTarget.endsWith('.chm') || lowerTarget.endsWith('.txt') || lowerTarget.endsWith('.pdf') || lowerTarget.endsWith('.html') || lowerTarget.endsWith('.ini') || lowerTarget.endsWith('.rtf') || lowerTarget.endsWith('.url')) continue;
+
+            // Completely ignore Chrome/Edge PWA Web Apps (like Gmail, Presentation)
+            if (lowerTarget.includes('chrome_proxy.exe') || lowerTarget.includes('msedge_proxy.exe')) continue;
+
+            // Deduplicate by target executable
+            let shouldAdd = false;
+            if (uniqueAppsByExe.has(lowerTarget)) {
+              const existingName = uniqueAppsByExe.get(lowerTarget).appName;
+              if (name.length < existingName.length) {
+                shouldAdd = true;
+              }
+            } else {
+              shouldAdd = true;
+            }
+
+            if (shouldAdd) {
+              let iconDataUrl = `https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/android.png`;
+              try {
+                // Read the native icon directly from the TARGET EXECUTABLE (.exe)
+                if (fs.existsSync(targetPath)) {
+                  // The user wants large/256x256 icons. 'large' retrieves the largest available (up to 256x256 on Windows).
+                  const nativeImage = await app.getFileIcon(targetPath, { size: 'large' });
+                  if (nativeImage && !nativeImage.isEmpty()) {
+                    iconDataUrl = nativeImage.toDataURL();
+                  }
+                }
+              } catch (e) {
+                console.error(`Failed to fetch icon for ${name}:`, e.message);
+              }
+
+              // Send the exact permissions requested. The frontend will score them.
+              const permissions = [];
+
+              if (lowerName.includes('discord') || lowerName.includes('zoom') || lowerName.includes('teams') || lowerName.includes('obs') || lowerName.includes('skype') || lowerName.includes('whatsapp') || lowerName.includes('telegram') || lowerName.includes('teamviewer')) {
+                permissions.push('NETWORK', 'CAMERA', 'MICROPHONE', 'CONTACTS', 'BACKGROUND_MONITORING', 'SCREEN_RECORDING');
+              } else if (lowerName.includes('chrome') || lowerName.includes('edge') || lowerName.includes('opera') || lowerName.includes('spotify') || lowerName.includes('browser') || lowerName.includes('brave') || lowerName.includes('firefox')) {
+                permissions.push('NETWORK', 'BROWSER_TRACKING', 'FILES', 'LOCATION');
+              } else if (lowerName.includes('vlc') || lowerName.includes('sublime') || lowerName.includes('notepad') || lowerName.includes('code') || lowerName.includes('studio') || lowerName.includes('word') || lowerName.includes('excel') || lowerName.includes('powerpoint') || lowerName.includes('postman') || lowerName.includes('docker') || lowerName.includes('pycharm') || lowerName.includes('compass') || lowerName.includes('eclipse') || lowerName.includes('intellij') || lowerName.includes('packet tracer') || lowerName.includes('office')) {
+                permissions.push('FILES', 'NETWORK');
+              } else {
+                permissions.push('FILES');
+              }
+
+              uniqueAppsByExe.set(lowerTarget, {
+                appName: name,
+                packageName: 'Local Desktop App',
+                icon: iconDataUrl,
+                permissions,
+                score: 0 // Frontend will override this
+              });
+            }
+          }
+        } catch (err) {
+          // Ignore permission denied on specific system folders
+        }
+      }
+    };
+
+    for (const dir of startMenuPaths) {
+      await scanDir(dir);
+    }
+
+    // Final deduplication by App Name
+    const uniqueAppsByName = new Map();
+    for (const app of uniqueAppsByExe.values()) {
+      if (!uniqueAppsByName.has(app.appName)) {
+        uniqueAppsByName.set(app.appName, app);
+      }
+    }
+
+    resolve(Array.from(uniqueAppsByName.values()));
+  });
 });
 
 ipcMain.on('get-app-path', (event) => {

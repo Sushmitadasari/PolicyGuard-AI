@@ -43,36 +43,41 @@ function humanReasonFromPermissions(permissions = []) {
 
   const hasCamera = list.some((p) => p.includes('camera'));
   const hasMic = list.some((p) => p.includes('microphone') || p.includes('record_audio'));
-  const hasInternet = list.some((p) => p.includes('internet') || p.includes('network'));
+  const hasNetwork = list.some((p) => p.includes('internet') || p.includes('network'));
   const hasLocation = list.some((p) => p.includes('location'));
   const hasContacts = list.some((p) => p.includes('contacts'));
-  const hasStorage = list.some((p) => p.includes('storage') || p.includes('media'));
-  const hasSMS = list.some((p) => p.includes('sms'));
+  const hasStorage = list.some((p) => p.includes('storage') || p.includes('media') || p.includes('files'));
   const hasBackground = list.some((p) => p.includes('background'));
+  const hasBrowserTracking = list.some((p) => p.includes('browser_tracking'));
 
-  if (hasCamera && hasMic && hasInternet) {
-    sensitive.push('This app can capture media and communicate data through network access.');
+  if ((hasCamera || hasMic) && hasNetwork) {
+    sensitive.push('This app can record audio/video and communicate online.');
   } else if (hasCamera && hasMic) {
-    sensitive.push('This app can access camera and microphone which may affect personal privacy.');
-  } else {
-    if (hasCamera) sensitive.push('This app can access the camera to capture images or video.');
-    if (hasMic) sensitive.push('This app can access the microphone to record audio.');
+    sensitive.push('This app can access your camera and microphone locally.');
   }
 
-  if (hasLocation && hasContacts) {
-    sensitive.push('This app can access both location and personal contact information.');
-  } else {
-    if (hasLocation) sensitive.push('This app tracks device location and may monitor movement activity.');
-    if (hasContacts) sensitive.push('This app can access contacts and communication-related information.');
+  if (hasBrowserTracking && hasLocation) {
+    sensitive.push('This browser may track browsing behavior and device location.');
+  } else if (hasBrowserTracking) {
+    sensitive.push('This app may track online behavior across websites.');
   }
 
-  if (hasStorage) sensitive.push('This app can read and modify stored files on the device.');
-  if (hasInternet && !hasCamera) sensitive.push('This app communicates through internet/network connections.');
-  if (hasSMS) sensitive.push('This app can access messages and verification-related data.');
-  if (hasBackground) sensitive.push('This app may continue running in the background.');
+  if (hasBackground && hasNetwork) {
+    sensitive.push('This app may continue monitoring activity in background.');
+  } else if (hasBackground) {
+    sensitive.push('This app runs in the background without user interaction.');
+  }
+
+  if (hasNetwork && !hasCamera && !hasMic && !hasBrowserTracking && !hasBackground) {
+    sensitive.push('This app communicates over internet services.');
+  }
+
+  if (hasStorage && !hasNetwork && !hasCamera && !hasMic && !hasBrowserTracking && !hasBackground) {
+    sensitive.push('This app mainly accesses local storage files.');
+  }
 
   if (sensitive.length === 0) {
-    sensitive.push('This app requires standard permissions with no obvious privacy concerns.');
+    sensitive.push('This app requests basic capabilities.');
   }
 
   return sensitive;
@@ -84,19 +89,15 @@ function getRiskAssessment(packageName, appName, permissions = []) {
   let score = 0;
 
   const list = permissions.map((p) => p.toLowerCase());
-  if (list.some((p) => p.includes('camera'))) score += 15;
-  if (list.some((p) => p.includes('microphone') || p.includes('record_audio'))) score += 15;
-  if (list.some((p) => p.includes('sms'))) score += 20;
-  if (list.some((p) => p.includes('contacts'))) score += 15;
+  if (list.some((p) => p.includes('camera'))) score += 35;
+  if (list.some((p) => p.includes('microphone') || p.includes('record_audio'))) score += 35;
+  if (list.some((p) => p.includes('contacts'))) score += 25;
+  if (list.some((p) => p.includes('screen_recording'))) score += 20;
+  if (list.some((p) => p.includes('background_monitoring') || p.includes('background'))) score += 15;
+  if (list.some((p) => p.includes('browser_tracking'))) score += 15;
   if (list.some((p) => p.includes('location'))) score += 10;
-  if (list.some((p) => p.includes('storage') || p.includes('media'))) score += 10;
-
-  RISK_RULES.forEach((rule) => {
-    if (rule.keywords.some((keyword) => identity.includes(keyword))) {
-      score += rule.points;
-      reasons.push(rule.reason);
-    }
-  });
+  if (list.some((p) => p.includes('network') || p.includes('internet'))) score += 10;
+  if (list.some((p) => p.includes('storage') || p.includes('media') || p.includes('files'))) score += 5;
 
   const permissionReasons = humanReasonFromPermissions(permissions);
   reasons.push(...permissionReasons);
@@ -111,21 +112,23 @@ function getRiskAssessment(packageName, appName, permissions = []) {
 }
 
 function getRiskLabel(score) {
-  if (score >= 71) return 'High Risk';
-  if (score >= 46) return 'Medium Risk';
-  if (score >= 26) return 'Low Risk';
+  if (score >= 80) return 'High Risk';
+  if (score >= 40) return 'Medium Risk';
+  if (score >= 15) return 'Low Risk';
   return 'Safe';
 }
 
 function getSafetyStatus(score) {
-  if (score >= 71) return 'At Risk';
-  if (score >= 46) return 'Moderate';
-  return 'Good';
+  if (score >= 80) return 'At Risk';
+  if (score >= 40) return 'Moderate';
+  if (score >= 15) return 'Good';
+  return 'Excellent';
 }
 
 function riskColor(score) {
-  if (score >= 71) return '#ef4444';
-  if (score >= 46) return '#f59e0b';
+  if (score >= 80) return '#ef4444';
+  if (score >= 40) return '#f59e0b';
+  if (score >= 15) return '#eab308';
   return '#10b981';
 }
 
@@ -159,95 +162,10 @@ function recommendationsFromReasons(reasons = []) {
   return recommendations.slice(0, 3);
 }
 
-function formatApps(installedApps) {
-  return installedApps.map((app, index) => {
-    const permissions = app.permissions || [];
-    const assessment = getRiskAssessment(app.packageName, app.appName, permissions);
 
-    return {
-      id: `${app.packageName}-${index}`,
-      name: app.appName,
-      packageName: app.packageName,
-      icon: app.icon,
-      permissions,
-      score: assessment.score,
-      risk: getRiskLabel(assessment.score),
-      reasons: assessment.reasons,
-    };
-  });
-}
-
-// Mock data generator for demo
-function generateMockApps() {
-  const mockApps = [
-    {
-      appName: 'WhatsApp',
-      packageName: 'com.whatsapp',
-      icon: 'https://logo.clearbit.com/whatsapp.com',
-      permissions: ['CAMERA', 'MICROPHONE', 'CONTACTS', 'STORAGE', 'LOCATION'],
-      score: 55,
-    },
-    {
-      appName: 'Instagram',
-      packageName: 'com.instagram.android',
-      icon: 'https://logo.clearbit.com/instagram.com',
-      permissions: ['CAMERA', 'MICROPHONE', 'CONTACTS', 'STORAGE', 'LOCATION'],
-      score: 65,
-    },
-    {
-      appName: 'Chrome',
-      packageName: 'com.android.chrome',
-      icon: 'https://logo.clearbit.com/google.com',
-      permissions: ['INTERNET', 'STORAGE', 'LOCATION'],
-      score: 35,
-    },
-    {
-      appName: 'Gmail',
-      packageName: 'com.google.android.gm',
-      icon: 'https://logo.clearbit.com/gmail.com',
-      permissions: ['CONTACTS', 'CALENDAR', 'STORAGE'],
-      score: 40,
-    },
-    {
-      appName: 'YouTube',
-      packageName: 'com.google.android.youtube',
-      icon: 'https://logo.clearbit.com/youtube.com',
-      permissions: ['INTERNET', 'STORAGE', 'CAMERA', 'MICROPHONE'],
-      score: 50,
-    },
-    {
-      appName: 'Spotify',
-      packageName: 'com.spotify.music',
-      icon: 'https://logo.clearbit.com/spotify.com',
-      permissions: ['INTERNET', 'STORAGE', 'MICROPHONE'],
-      score: 45,
-    },
-    {
-      appName: 'System Cleaner Pro',
-      packageName: 'com.cleaner.pro',
-      icon: '🧹',
-      permissions: ['STORAGE', 'SYSTEM_ALERT_WINDOW', 'WRITE_SECURE_SETTINGS'],
-      score: 78,
-    },
-    {
-      appName: 'VPN Master',
-      packageName: 'com.vpn.master',
-      icon: '🔒',
-      permissions: ['INTERNET', 'CHANGE_NETWORK_STATE', 'WRITE_SETTINGS'],
-      score: 72,
-    },
-  ];
-
-  return mockApps.map((app, index) => ({
-    id: `${app.packageName}-${index}`,
-    ...app,
-    risk: getRiskLabel(app.score),
-    reasons: getRiskAssessment(app.packageName, app.appName, app.permissions).reasons,
-  }));
-}
 
 // Screen Components
-function DashboardScreen({ apps, overallSafety, safetyStatus, isScanning, onScan, onSelectApp }) {
+function DashboardScreen({ apps, overallSafety, safetyStatus, isScanning, onScan, onSelectApp, onViewAll }) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const highRiskCount = apps.filter((a) => a.score >= 71).length;
@@ -256,7 +174,7 @@ function DashboardScreen({ apps, overallSafety, safetyStatus, isScanning, onScan
   const filteredApps = useMemo(() => {
     if (!searchQuery.trim()) return apps.slice(0, 5);
     const q = searchQuery.toLowerCase().replace(/\s+/g, '');
-    return apps.filter(app => app.name.toLowerCase().replace(/\s+/g, '').includes(q)).slice(0, 5);
+    return apps.filter(app => (app.name || '').toLowerCase().replace(/\s+/g, '').includes(q)).slice(0, 5);
   }, [apps, searchQuery]);
 
   return (
@@ -297,7 +215,7 @@ function DashboardScreen({ apps, overallSafety, safetyStatus, isScanning, onScan
           </div>
         )}
         {apps.length > 5 && !searchQuery && (
-          <button className="view-all-button">View All {apps.length} Apps →</button>
+          <button className="view-all-button" onClick={onViewAll}>View All {apps.length} Apps →</button>
         )}
       </div>
     </div>
@@ -317,7 +235,7 @@ function ApplicationsScreen({ apps, onSelectApp }) {
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().replace(/\s+/g, '');
-      result = result.filter(app => app.name.toLowerCase().replace(/\s+/g, '').includes(q));
+      result = result.filter(app => (app.name || '').toLowerCase().replace(/\s+/g, '').includes(q));
     }
     return result;
   }, [apps, activeFilter, searchQuery]);
@@ -454,12 +372,38 @@ export default function App() {
   const [snackbarVisible, setSnackbarVisible] = useState(false);
 
   useEffect(() => {
-    // Simulate app loading
-    setTimeout(() => {
-      const mockApps = generateMockApps();
-      setApps(mockApps);
-      setLoading(false);
-    }, 1500);
+    const fetchApps = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.getInstalledApps) {
+          const realApps = await window.electronAPI.getInstalledApps();
+          
+          // Hydrate the apps with our privacy scoring system
+          const formattedApps = realApps.map((app, index) => {
+            const assessment = getRiskAssessment(app.packageName, app.appName, app.permissions);
+            return {
+              id: `${app.packageName}-${index}`,
+              ...app,
+              name: app.appName,
+              risk: getRiskLabel(assessment.score),
+              score: assessment.score,
+              reasons: assessment.reasons,
+            };
+          });
+
+          setApps(formattedApps);
+        } else {
+          setApps([]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch installed apps:", err);
+        setApps([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    // Slight delay to keep the splash animation smooth
+    setTimeout(fetchApps, 1000);
   }, []);
 
   const orderedApps = useMemo(() => [...apps].sort((a, b) => b.score - a.score), [apps]);
@@ -501,7 +445,7 @@ export default function App() {
   const renderScreen = () => {
     switch (activeTab) {
       case 'Home':
-        return <DashboardScreen apps={orderedApps} overallSafety={overallSafety} safetyStatus={safetyStatus} isScanning={isScanning} onScan={handleScan} onSelectApp={setSelectedApp} />;
+        return <DashboardScreen apps={orderedApps} overallSafety={overallSafety} safetyStatus={safetyStatus} isScanning={isScanning} onScan={handleScan} onSelectApp={setSelectedApp} onViewAll={() => setActiveTab('Applications')} />;
       case 'Applications':
         return <ApplicationsScreen apps={orderedApps} onSelectApp={setSelectedApp} />;
       case 'Scan':
@@ -511,7 +455,7 @@ export default function App() {
       case 'Settings':
         return <SettingsScreen />;
       default:
-        return <DashboardScreen apps={orderedApps} overallSafety={overallSafety} safetyStatus={safetyStatus} isScanning={isScanning} onScan={handleScan} onSelectApp={setSelectedApp} />;
+        return <DashboardScreen apps={orderedApps} overallSafety={overallSafety} safetyStatus={safetyStatus} isScanning={isScanning} onScan={handleScan} onSelectApp={setSelectedApp} onViewAll={() => setActiveTab('Applications')} />;
     }
   };
 

@@ -69,8 +69,10 @@ body {
 /* Sidebar */
 .sidebar {
   width: 280px;
-  background-color: #0B0F19;
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -153,9 +155,10 @@ body {
 }
 
 .menu-item-wrapper.active .menu-item {
-  background-color: rgba(37, 99, 235, 0.15);
-  border: 1px solid rgba(37, 99, 235, 0.3);
-  color: #2563EB;
+  background-color: rgba(37, 99, 235, 0.2);
+  border: 1px solid rgba(37, 99, 235, 0.4);
+  box-shadow: 0 0 15px rgba(37, 99, 235, 0.3);
+  color: #60a5fa;
   font-weight: 800;
 }
 
@@ -229,13 +232,20 @@ body {
 .search-box {
   display: flex;
   align-items: center;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   margin: 0 16px 12px;
   border-radius: 12px;
   padding: 0 12px;
   height: 46px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   gap: 8px;
+  transition: all 0.3s;
+}
+.search-box:focus-within {
+  border-color: rgba(37, 99, 235, 0.5);
+  box-shadow: 0 0 15px rgba(37, 99, 235, 0.2);
 }
 
 .search-icon {
@@ -435,18 +445,23 @@ body {
 
 /* App Card */
 .app-card {
-  background-color: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
   padding: 16px;
   margin: 0 16px 12px;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  will-change: transform;
 }
 
 .app-card:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.12);
-  transform: translateY(-2px);
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
 }
 
 .app-row {
@@ -498,8 +513,8 @@ body {
 
 .app-name {
   color: #ffffff;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 800;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -521,13 +536,31 @@ body {
 }
 
 .score-badge {
-  padding: 2px 8px;
-  border-radius: 6px;
+  padding: 4px 10px;
+  border-radius: 8px;
   color: #ffffff;
-  font-size: 11px;
-  font-weight: 700;
-  min-width: 28px;
+  font-size: 12px;
+  font-weight: 800;
+  min-width: 32px;
   text-align: center;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 12px #ef4444;
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 24px #ef4444, 0 0 8px #ef4444 inset;
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 12px #ef4444;
+  }
+}
+.pulse-anim {
+  animation: pulse 1.5s infinite;
 }
 
 .risk-level {
@@ -603,13 +636,14 @@ body {
 }
 
 .permission-chip {
-  background-color: rgba(37, 99, 235, 0.1);
-  border: 1px solid rgba(37, 99, 235, 0.2);
-  color: #2563EB;
-  padding: 4px 8px;
-  border-radius: 6px;
+  background-color: rgba(37, 99, 235, 0.15);
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  color: #60a5fa;
+  padding: 4px 12px;
+  border-radius: 20px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
 }
 
 .no-perms-text {
@@ -885,7 +919,14 @@ body {
   font-size: 13px;
   font-weight: 600;
   z-index: 999;
-  animation: slideUp 0.2s ease-out;
+  transition: all 0.3s ease-in-out;
+  opacity: 1;
+}
+
+.snackbar.hidden {
+  transform: translateX(-50%) translateY(150%);
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* Loading Screen */

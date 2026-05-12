@@ -66,4 +66,6 @@ sessions/
 # generated files
 *.pid
 *.seed
-*.pid.lock
+*.pid.lockdesktop-app/dist/
+desktop-app/node_modules/
+desktop-app/.env

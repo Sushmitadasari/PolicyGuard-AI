@@ -151,7 +151,7 @@ export function AppCard({ app, onPressDetails, onAlertPress }) {
       <div className="app-row">
         <div className="icon-wrap">
           {app.icon && typeof app.icon === 'string' && app.icon.match(/^(data:|http)/) ? (
-            <img src={app.icon} alt={app.name} className="app-icon" />
+            <img src={app.icon} alt="" className="app-icon" />
           ) : (
             <div className="icon-placeholder">
               {typeof app.icon === 'string' && app.icon.length <= 2 ? app.icon : <span>{(app.name || 'A').slice(0, 2).toUpperCase()}</span>}
@@ -162,7 +162,7 @@ export function AppCard({ app, onPressDetails, onAlertPress }) {
           <div className="app-name">{app.name}</div>
           <div className="package-name">{app.packageName}</div>
           <div className="app-meta-row">
-            <div className="score-badge" style={{ backgroundColor: riskColor(app.score) }}>
+            <div className={`score-badge ${app.risk === 'High Risk' ? 'pulse-anim' : ''}`} style={{ backgroundColor: riskColor(app.score), boxShadow: app.risk !== 'High Risk' ? `0 0 12px ${riskColor(app.score)}` : undefined }}>
               {app.score}
             </div>
             <div className="risk-level">{app.risk}</div>
