@@ -102,6 +102,7 @@ POLICYGUARD AI solves this problem by providing real-time AI-powered privacy ana
 * Instant risk alerts
 * Browser popup privacy summaries
 * Real-time monitoring support
+* Web-accessible extension interface support
 
 ## Mobile Application
 
@@ -305,6 +306,19 @@ JWT_SECRET=your_jwt_secret
 OPENAI_API_KEY=your_openai_key
 GEMINI_API_KEY=your_gemini_key
 ```
+
+---
+
+# Extension Availability
+
+The POLICYGUARD AI browser extension is also accessible through the web platform, enabling users to perform privacy analysis directly from the dashboard without requiring standalone browser installation.
+
+This allows:
+
+* Web-based policy scanning
+* Integrated dashboard analysis
+* Real-time browser privacy monitoring
+* Cross-platform accessibility
 
 ---
 
